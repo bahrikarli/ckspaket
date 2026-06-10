@@ -37,11 +37,16 @@ const KOPYALA = [
 ];
 
 const KORU = new Set([
-  'anasayfa.html', 'arsiv.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'anasayfa.html', 'arsiv.html', 'dashboard.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
-  'ckspaket-paketle.js', 'ckspaket-paketle.bat', 'ckspaket-musteri-guncelle.js', 'ckspaket-musteri-guncelle.bat',
-  'ckspaket-yayinla.js', 'ckspaket-yayinla.bat',
-  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js',
+  'baslat.bat', 'baslat-gizli.vbs', 'durdur.bat', 'baslat-launcher.vbs', 'kisayol-olustur.vbs', 'sunucu-gizli.bat', 'sunucu-test.bat', 'sql-baglanti-test.bat', 'icon',
+  'ckspaket-paketle.js', 'ckspaket-paketle.bat', 'ckspaket-musteri-surum.bat',
+  'ckspaket-musteri-guncelle.js', 'ckspaket-musteri-guncelle.bat',
+  'ckspaketdata-olustur.js', 'ckspaketdata-olustur.bat',
+  'ckspaketdata-musteri-kur.js', 'ckspaketdata-musteri-kur.bat',
+  'ckspaket-sema-yedek-al.js', 'ckspaket-sema-yedek-al.bat',
+  'MUSTERI-SQL-KURULUM.txt', 'sema',
+  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'paket-admin.js',
   'sistem-ayar.js', 'config.js'
 ]);
 
@@ -201,7 +206,7 @@ app.use('/taramalar', (req, res, next) => {
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASS || '189189',
   server: process.env.DB_SERVER || 'YENISERVER',
-  database: process.env.DB_NAME || 'demoanaa',
+  database: process.env.DB_NAME || 'ckspaketdata',
   options: {
         encrypt: false,
         trustServerCertificate: true,
@@ -300,6 +305,38 @@ function ibformPaketYamasi() {
   console.log('  OK: ibform.html paket yamalari');
 }
 
+function paketAdminYamasi() {
+  const p = path.join(HEDEF, 'server.js');
+  if (!fs.existsSync(p)) return;
+  let s = oku(p);
+  if (!s.includes('registerPaketAdmin')) {
+    s = s.replace(
+      /app\.get\('\/api\/kullanicilar', authenticateToken, sadeceAdmin, async \(req, res\) => \{[\s\S]*?\n\}\);\n\n\/\/ ÇKS LİSTE/,
+      `app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(\`
+      SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad, '') AS ad, ISNULL(Soyad, '') AS soyad,
+             ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
+             ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol
+      FROM Kullanicilar ORDER BY rol DESC, Ad
+    \`);
+    res.json(result.recordset);
+  } catch (err) { res.json([]); }
+});
+
+if (CKSPAKET_MOD) {
+  const { registerPaketAdmin } = require('./paket-admin');
+  registerPaketAdmin(app, { CKSPAKET_MOD, authenticateToken, sadeceAdmin, sql, getPool });
+}
+
+// ÇKS LİSTE`
+    );
+    yaz(p, s);
+    console.log('  OK: server.js paket admin API');
+  }
+}
+
 function paketGuncellemeYamasi() {
   const p = path.join(HEDEF, 'server.js');
   if (!fs.existsSync(p)) return;
@@ -378,6 +415,7 @@ serverJsPaketYamasi();
 cksHtmlPaketYamasi();
 dilekcePaketYamasi();
 ibformPaketYamasi();
+paketAdminYamasi();
 paketGuncellemeYamasi();
 bosTaramalarYapisi();
 
@@ -393,14 +431,14 @@ function portDogrulama() {
   if (fs.existsSync(envPath) && !/^PORT=3030\s*$/m.test(oku(envPath))) {
     hatalar.push('.env: PORT=3030 korunmali (senkron .env dosyasina dokunmaz)');
   }
-  if (fs.existsSync(envPath) && !/^DB_NAME=demoanaa\s*$/m.test(oku(envPath))) {
-    hatalar.push('.env: DB_NAME=demoanaa olmali (3030 demo veritabani)');
+  if (fs.existsSync(envPath) && !/^DB_NAME=ckspaketdata\s*$/m.test(oku(envPath))) {
+    hatalar.push('.env: DB_NAME=ckspaketdata olmali (ckspaket veritabani)');
   }
   if (/\[anaa\]\.\[dbo\]\./.test(srv)) {
     hatalar.push('server.js: [anaa].[dbo] sabit referanslari kalmis');
   }
-  if (!/database: process\.env\.DB_NAME \|\| 'demoanaa'/.test(srv)) {
-    hatalar.push('server.js: dbConfig demoanaa (.env) kullanmali');
+  if (!/database: process\.env\.DB_NAME \|\| 'ckspaketdata'/.test(srv)) {
+    hatalar.push('server.js: dbConfig ckspaketdata (.env) kullanmali');
   }
   if (hatalar.length) {
     console.error('\nPORT DOGRULAMA HATASI (ckspaket 3030):');

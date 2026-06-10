@@ -12,11 +12,13 @@ function gitVarMi(kok) {
 }
 
 function gitCalistir(komut, kok, sessiz = true) {
-  return execSync(komut, {
+  const out = execSync(komut, {
     cwd: kok,
     encoding: 'utf8',
     stdio: sessiz ? ['pipe', 'pipe', 'pipe'] : 'inherit'
-  }).trim();
+  });
+  if (out == null || out === undefined) return '';
+  return String(out).trim();
 }
 
 function dalAl() {

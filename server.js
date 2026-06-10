@@ -177,7 +177,7 @@ const dbConfig = {
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASS || '189189',
   server: process.env.DB_SERVER || 'YENISERVER',
-  database: process.env.DB_NAME || 'demoanaa',
+  database: process.env.DB_NAME || 'ckspaketdata',
   options: {
         encrypt: false,
         trustServerCertificate: true,
@@ -385,13 +385,19 @@ app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) =>
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
+      SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad, '') AS ad, ISNULL(Soyad, '') AS soyad,
+             ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
              ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol
       FROM Kullanicilar ORDER BY rol DESC, Ad
     `);
     res.json(result.recordset);
   } catch (err) { res.json([]); }
 });
+
+if (CKSPAKET_MOD) {
+  const { registerPaketAdmin } = require('./paket-admin');
+  registerPaketAdmin(app, { CKSPAKET_MOD, authenticateToken, sadeceAdmin, sql, getPool });
+}
 
 // ÇKS LİSTE & ARAMA – HEM İLK 100 HEM DE TÜM TABLODA ARAMA (%100 ÇALIŞIR)
 // ÇKS LİSTE & ARAMA – HEM İLK 100 HEM DE TÜM TABLODA ARAMA (%100 ÇALIŞIR)
@@ -5295,7 +5301,7 @@ async function ustYaziYukleButonunaBas(targetFrame) {
         }
     });
 }
-//deneme
+
 async function ustYaziFileInputIndex(targetFrame) {
     return targetFrame.evaluate(() => {
         const inputs = Array.from(document.querySelectorAll('input[type="file"]'))

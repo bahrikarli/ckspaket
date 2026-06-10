@@ -46,7 +46,7 @@ const KORU = new Set([
   'ckspaketdata-musteri-kur.js', 'ckspaketdata-musteri-kur.bat',
   'ckspaket-sema-yedek-al.js', 'ckspaket-sema-yedek-al.bat',
   'MUSTERI-SQL-KURULUM.txt', 'sema',
-  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'paket-admin.js',
+  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'guncelleme-koru.js', 'paket-admin.js',
   'sistem-ayar.js', 'config.js'
 ]);
 

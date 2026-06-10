@@ -6,7 +6,6 @@ const path = require('path');
 const { execSync } = require('child_process');
 const axios = require('axios');
 const { mevcutSurumAl, surumKarsilastir } = require('./paket-guncelleme');
-const { koruMu } = require('./guncelleme-koru');
 
 function gitVarMi(kok) {
   return fs.existsSync(path.join(kok, '.git'));
@@ -184,13 +183,13 @@ function gitExec(komut, kok, stdio = 'inherit') {
   execSync(komut, { cwd: kok, stdio, env: gitEnv() });
 }
 
-const GIT_KORU_SKIP = koruMu;
+const GIT_KORU = new Set(['.env', 'taramalar', 'uploads', 'guncellemeler', 'node_modules', 'logs', '_guncelleme_yedek', '_git_klon']);
 
 function gitDosyalariKopyala(tmp, hedef) {
-  console.log('Korunan (atlanir): taramalar, uploads, dist, .env, node_modules');
+  console.log('Korunan klasorler (degismez): taramalar, uploads, .env');
   for (const ad of fs.readdirSync(tmp)) {
-    if (ad === '.git' || GIT_KORU_SKIP(ad)) {
-      console.log('  atla:', ad);
+    if (ad === '.git' || GIT_KORU.has(ad)) {
+      if (GIT_KORU.has(ad)) console.log('  atla:', ad);
       continue;
     }
     const src = path.join(tmp, ad);

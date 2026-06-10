@@ -8,7 +8,6 @@ const { execSync } = require('child_process');
 const axios = require('axios');
 const { surumKarsilastir, mevcutSurumAl } = require('./paket-guncelleme');
 const { gitGuncellemeAktifMi, gitPullUygula, gitUzakSurumKontrol, gitKuruluMu, githubZipGuncelle } = require('./git-guncelleme');
-const { koruMu } = require('./guncelleme-koru');
 
 const KOK = __dirname;
 
@@ -16,22 +15,29 @@ try {
   require('dotenv').config({ path: path.join(KOK, '.env'), quiet: true });
 } catch (_) {}
 
+/** Guncelleme sirasinda ASLA degistirilmez / yedeklenmez (taramalar dahil) */
+const KORU_DOSYALAR = ['.env'];
+const KORU_KLASORLER = ['taramalar', 'uploads', 'guncellemeler', 'node_modules', 'logs', '_guncelleme_yedek', '_git_klon'];
 let yedekKok = '';
 
 function yedekAl() {
-  console.log('.env yedekleniyor (taramalar/dist/uploads DOKUNULMAZ)...');
+  console.log('.env yedekleniyor (taramalar ve uploads dokunulmaz)...');
   yedekKok = path.join(KOK, '_guncelleme_yedek');
   if (fs.existsSync(yedekKok)) fs.rmSync(yedekKok, { recursive: true, force: true });
   fs.mkdirSync(yedekKok, { recursive: true });
-  const env = path.join(KOK, '.env');
-  if (fs.existsSync(env)) fs.copyFileSync(env, path.join(yedekKok, '.env'));
+  for (const ad of KORU_DOSYALAR) {
+    const src = path.join(KOK, ad);
+    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(yedekKok, ad));
+  }
   console.log('Yedek tamam.');
 }
 
 function yedekGeri() {
   if (!yedekKok || !fs.existsSync(yedekKok)) return;
-  const src = path.join(yedekKok, '.env');
-  if (fs.existsSync(src)) fs.copyFileSync(src, path.join(KOK, '.env'));
+  for (const ad of KORU_DOSYALAR) {
+    const src = path.join(yedekKok, ad);
+    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(KOK, ad));
+  }
   fs.rmSync(yedekKok, { recursive: true, force: true });
   yedekKok = '';
 }
@@ -70,12 +76,10 @@ function zipAc(zipYol, hedefKlasor) {
 
 function dosyalariUygula(kaynak, hedef) {
   for (const ad of fs.readdirSync(kaynak)) {
-    if (koruMu(ad)) {
-      console.log('  atla:', ad);
-      continue;
-    }
     const src = path.join(kaynak, ad);
     const dst = path.join(hedef, ad);
+    if (KORU_DOSYALAR.includes(ad)) continue;
+    if (KORU_KLASORLER.includes(ad)) continue;
     const st = fs.statSync(src);
     if (st.isDirectory()) {
       if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });

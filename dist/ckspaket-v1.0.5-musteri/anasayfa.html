@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CKS Paket</title>
+  <title>Sarayönü Ziraat Odası — CKS Paket</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -27,7 +27,7 @@
 
 <div class="header">
   <img src="tzob-logo.png" alt="TZOB Logo" class="logo" onerror="this.style.display='none'">
-  <div class="title" id="kurum-baslik">…</div>
+  <div class="title">SARAYÖNÜ ZİRAAT ODASI</div>
   <div class="subtitle">CKS Paket — Ofis Sistemi</div>
   <div class="user">Hoş geldin, <strong id="isim">Personel</strong></div>
 </div>
@@ -114,10 +114,7 @@
 
 <div class="logout" onclick="cikis()">ÇIKIŞ YAP</div>
 
-<script src="/kurum-baslik.js"></script>
 <script>
-kurumBaslikYukle({ titleSuffix: ' — CKS Paket' });
-
 const token = localStorage.getItem('token');
 if (!token) location.href = '/';
 

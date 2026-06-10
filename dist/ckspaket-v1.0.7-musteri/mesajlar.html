@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesajlar</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+      --ana: #006400; 
+      --ana-acik: #008000;
+      --gelen: #ffffff; 
+      --giden: #d9fdd3; 
+      --arka: #f0f2f5; 
+      --sol-arka: #ffffff; 
+      --yazi: #111b21;
+      --yazi-ikincil: #667781;
+      --online: #25d366; 
+      --border: #e9edef;
+  }
+
+  body {margin:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:var(--arka); color:var(--yazi); height:100vh; display:flex; flex-direction:column;}
+  
+  .container {flex:1; display:flex; overflow:hidden; background: var(--arka);}
+  
+  .sol {width: 320px; background:var(--sol-arka); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index: 2;}
+  .baslik {background:var(--ana); color:white; padding:18px 20px; font-size:18px; font-weight:bold; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+  
+  #kullanicilar {flex:1; overflow-y:auto;}
+  .kullanici {padding:12px 15px; border-bottom:1px solid #f0f2f5; cursor:pointer; display:flex; align-items:center; transition: 0.2s;}
+  .kullanici:hover {background:#f5f6f6;}
+  .kullanici.aktif {background:#f0f2f5;}
+  
+  .avatar-kutu {position: relative; margin-right: 15px;}
+  .kullanici img {width:48px; height:48px; border-radius:50%; object-fit: cover; box-shadow: 0 1px 2px rgba(0,0,0,0.1);}
+  .online-dot {position: absolute; bottom: 2px; right: 2px; width: 13px; height: 13px; background: var(--online); border: 2px solid white; border-radius: 50%; display: none;}
+  .is-online .online-dot {display: block;}
+
+  .info {flex:1; overflow: hidden;}
+  .isim {font-weight:600; font-size:16px; margin-bottom: 3px; color: var(--yazi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .sonmesaj {font-size:13px; color: var(--yazi-ikincil);}
+  .durum-yazisi {font-size:12px; font-weight: 500;}
+  .durum-yazisi.cevrimici {color: var(--online);}
+  
+  .badge {background:#25d366; color:white; min-width:20px; height:20px; border-radius:10px; font-size:12px; padding:0 6px; display: flex; align-items: center; justify-content: center; font-weight:bold; margin-left: 10px;}
+  
+  .sag {flex:1; display:flex; flex-direction:column; position: relative;}
+  
+  #mesajlar {flex:1; padding:30px 40px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; background-color: #efeae2;}
+  
+  .mesaj {max-width:65%; padding:8px 12px; border-radius:8px; position:relative; word-wrap:break-word; box-shadow: 0 1px 1px rgba(0,0,0,0.1); font-size: 15px; line-height: 1.4;}
+  .gelen {align-self:flex-start; background:var(--gelen); border-top-left-radius:0;}
+  .giden {align-self:flex-end; background:var(--giden); border-top-right-radius:0;}
+  
+  .mesaj-alt {display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 4px;}
+  .zaman {font-size:11px; color:#667781;}
+  .tik-ikon {font-size: 12px; color: #53bdeb;} 
+  
+  .yaziyor {position:absolute; bottom: 80px; left: 40px; padding:6px 12px; font-style:italic; color:var(--yazi-ikincil); font-size:13px; display:none; background:white; border-radius:15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10;}
+  
+  .alt {padding:15px 20px; background:var(--sol-arka); border-top:1px solid var(--border); display:flex; align-items:center; gap:15px;}
+  #temizleBtn {background:transparent; color:#8696a0; border:none; font-size:22px; cursor:pointer; padding:10px; transition: 0.2s;}
+  #temizleBtn:hover {color:#dc3545;}
+  
+  #yeniMesaj {flex:1; padding:15px 20px; border-radius:8px; border:none; background:#f0f2f5; font-size:15px; outline:none;}
+  #yeniMesaj:focus {background: #ffffff; border: 1px solid #00a884; box-shadow: 0 0 0 1px #00a884 inset; padding: 14px 19px;} 
+  
+  #gonderBtn {background:var(--ana); color:white; border:none; width:45px; height:45px; border-radius:50%; cursor:pointer; font-size:18px; display: flex; align-items: center; justify-content: center; transition: 0.2s;}
+  #gonderBtn:hover {background:var(--ana-acik); transform: scale(1.05);}
+  #gonderBtn:disabled {background: #8696a0; cursor: not-allowed; transform: none;}
+
+  .bos-ekran {display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #667781; text-align: center; background: #f0f2f5;}
+  .bos-ekran i {font-size: 80px; color: #d1d7db; margin-bottom: 20px;}
+  .bos-ekran h2 {font-weight: 300; font-size: 24px; margin-bottom: 10px;}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="sol">
+    <div class="baslik"><i class="fas fa-comments"></i> Mesajlar</div>
+    <div id="kullanicilar">Yükleniyor...</div>
+  </div>
+  <div class="sag">
+    <div id="baslik" class="baslik" style="background: #f0f2f5; color: var(--yazi); border-bottom: 1px solid var(--border); box-shadow: none;">
+        <span id="baslikIsim">Sohbet başlatmak için bir kişi seçin</span>
+    </div>
+    
+    <div id="mesajlar">
+        <div class="bos-ekran">
+            <i class="fas fa-desktop"></i>
+            <h2>Ziraat Odası İletişim Ağı</h2>
+            <p>Sol taraftan bir personel seçerek mesajlaşmaya başlayabilirsiniz.</p>
+        </div>
+    </div>
+    
+    <div id="yaziyorGoster" class="yaziyor">yazıyor...</div>
+    
+    <div class="alt">
+      <button id="temizleBtn" onclick="mesajlariTemizle()" disabled title="Sohbeti Sil"><i class="fas fa-trash-alt"></i></button>
+      <input type="text" id="yeniMesaj" placeholder="Bir mesaj yazın" disabled>
+      <button id="gonderBtn" onclick="gonder()" disabled title="Gönder"><i class="fas fa-paper-plane"></i></button>
+      
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+
+let seciliId = null;
+let benimId = null;
+let oncekiMesajSayisi = 0;
+let ilkMesajYuklemesi = true;
+
+const SES_URL = '/sounds/whatsapp-notification.mp3';
+const SES_YEDEK = 'https://cdn.jsdelivr.net/gh/ekmancy/message-sound@master/whatsapp.mp3';
+let sesKilidiAcik = false;
+let sesNesne = null;
+
+function sesOlustur() {
+  if (sesNesne) return sesNesne;
+  sesNesne = new Audio(SES_URL);
+  sesNesne.volume = 0.85;
+  sesNesne.addEventListener('error', () => {
+    sesNesne = new Audio(SES_YEDEK);
+    sesNesne.volume = 0.85;
+  }, { once: true });
+  return sesNesne;
+}
+
+function acSesKilidi() {
+  if (sesKilidiAcik) return;
+  const a = sesOlustur();
+  const v = a.volume;
+  a.volume = 0.01;
+  a.play()
+    .then(() => {
+      a.pause();
+      a.currentTime = 0;
+      a.volume = v || 0.85;
+      sesKilidiAcik = true;
+    })
+    .catch(() => {});
+}
+
+function sesCal() {
+  if (!sesKilidiAcik) return;
+  const a = sesOlustur();
+  a.currentTime = 0;
+  a.play().catch(() => {});
+}
+
+document.body.addEventListener('click', acSesKilidi, { once: true, capture: true });
+document.body.addEventListener('keydown', acSesKilidi, { once: true, capture: true });
+
+// KALP ATIŞI
+setInterval(() => {
+  fetch('/api/heartbeat', {method:'POST', headers:{Authorization:'Bearer '+token}}).catch(() => {});
+}, 8000);
+
+// YAZIYOR KONTROLÜ
+setInterval(async () => {
+  if (!seciliId) return;
+  try {
+    const res = await fetch('/api/yaziyor-kontrol', {headers:{Authorization:'Bearer '+token}});
+    const data = await res.json();
+    document.getElementById('yaziyorGoster').style.display = data.yaziyor ? 'block' : 'none';
+  } catch {}
+}, 3000);
+
+// YAZARKEN BİLDİR
+let yaziyorTimer = null;
+document.getElementById('yeniMesaj').addEventListener('input', () => {
+  if (!seciliId) return;
+  clearTimeout(yaziyorTimer);
+  yaziyorTimer = setTimeout(() => {
+    fetch('/api/yaziyor', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body: JSON.stringify({karsiId: seciliId})
+    });
+  }, 1000);
+});
+
+// ONLINE LİSTE
+const onlineKullanicilar = new Set();
+async function onlineGuncelle() {
+  try {
+    const res = await fetch('/api/online', {headers:{Authorization:'Bearer '+token}});
+    const liste = await res.json();
+    onlineKullanicilar.clear();
+    liste.forEach(id => onlineKullanicilar.add(id));
+    yukleKullanicilar();
+  } catch {}
+}
+setInterval(onlineGuncelle, 15000);
+
+function avatar(isim) {
+  const c = document.createElement('canvas'); c.width = c.height = 48;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#cfd8dc'; ctx.fillRect(0,0,48,48);
+  ctx.font = 'bold 20px Segoe UI'; ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText((isim||'')[0]?.toUpperCase()||'?', 24, 26); 
+  return c.toDataURL();
+}
+
+// BAŞLANGIÇ
+fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
+  .then(r => r.json())
+  .then(d => {
+    if (d.success && d.user?.id) {
+      benimId = d.user.id;
+      fetch('/api/heartbeat', {method:'POST', headers:{Authorization:'Bearer '+token}}).catch(() => {});
+      yukleKullanicilar();
+      onlineGuncelle();
+    }
+  })
+  .catch(err => console.error("Kullanıcı bilgisi alınamadı:", err));
+
+async function yukleKullanicilar() {
+  try {
+    const [p, m] = await Promise.all([
+      fetch('/api/personeller', {headers:{Authorization:'Bearer '+token}}).then(r=>r.json()),
+      fetch('/api/mesajlar', {headers:{Authorization:'Bearer '+token}}).then(r=>r.json())
+    ]);
+    
+    let anlikToplamOkunmamis = 0;
+    const div = document.getElementById('kullanicilar'); 
+    div.innerHTML = '';
+    
+    p.forEach(k => {
+      const okunmamis = m.filter(x => x.GonderenId === k.Id && x.AliciId === benimId && x.OkunmaDurumu == 0).length;
+      anlikToplamOkunmamis += okunmamis;
+      
+      const online = onlineKullanicilar.has(k.Id);
+      const el = document.createElement('div'); 
+      
+      el.className = 'kullanici' + (online ? ' is-online' : '');
+      if(seciliId === k.Id) el.classList.add('aktif');
+      el.setAttribute('data-id', k.Id); 
+
+      let durumHtml = online ? `<span class="durum-yazisi cevrimici">Çevrimiçi</span>` : `<span class="durum-yazisi">Çevrimdışı</span>`;
+      
+      el.innerHTML = `
+        <div class="avatar-kutu">
+            <img src="${avatar(k.AdSoyad)}">
+            <span class="online-dot"></span>
+        </div>
+        <div class="info">
+            <div class="isim">${k.AdSoyad}</div>
+            <div class="sonmesaj">${durumHtml}</div>
+        </div>
+        ${okunmamis > 0 ? `<div class="badge">${okunmamis>99?'99+':okunmamis}</div>` : ''}
+      `;
+      
+      el.onclick = () => {
+        seciliId = k.Id;
+        ilkMesajYuklemesi = true;
+        document.querySelectorAll('.kullanici').forEach(x => x.classList.remove('aktif'));
+        el.classList.add('aktif');
+        document.getElementById('baslikIsim').innerHTML = `<strong>${k.AdSoyad}</strong> ile mesajlaşıyorsunuz`;
+        document.getElementById('yeniMesaj').disabled = false;
+        document.getElementById('gonderBtn').disabled = false;
+        document.getElementById('temizleBtn').disabled = false;
+        document.getElementById('yeniMesaj').focus();
+        
+        const b = el.querySelector('.badge'); if(b) b.remove();
+        
+        fetch('/api/mesaj-okundu', {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+token}, body:JSON.stringify({gonderenId:k.Id})})
+          .then(() => yukleMesajlar());
+      };
+      div.appendChild(el);
+    });
+
+  } catch (err) {
+    console.error("Kullanıcı listesi yüklenemedi:", err);
+    document.getElementById('kullanicilar').innerHTML = '<div style="padding:20px; text-align:center; color:#888;">Liste yüklenemedi.</div>';
+  }
+}
+
+async function yukleMesajlar() {
+  if (!seciliId) return;
+  try {
+    const tum = await fetch('/api/mesajlar', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json());
+    const ilgili = tum.filter(m => 
+      (m.GonderenId == seciliId && m.AliciId == benimId) || 
+      (m.GonderenId == benimId && m.AliciId == seciliId)
+    );
+
+    const yeniMesajVarMi = ilgili.length > oncekiMesajSayisi;
+    oncekiMesajSayisi = ilgili.length;
+
+    if (!ilkMesajYuklemesi && yeniMesajVarMi) {
+      const sonMesaj = ilgili[ilgili.length - 1];
+      if (sonMesaj.GonderenId != benimId) {
+        console.log("Gelen yeni mesaj algılandı → ses çalınıyor");
+        sesCal();
+      }
+    }
+    ilkMesajYuklemesi = false;
+
+    const div = document.getElementById('mesajlar');
+    
+    if (ilgili.length === 0) {
+        div.innerHTML = `<div style="text-align:center; color:#8696a0; margin-top:20px; font-size:14px; background: white; padding: 10px; border-radius: 8px; display:inline-block; align-self:center;">Bu sohbette henüz mesaj yok.</div>`;
+        return;
+    }
+    
+    div.innerHTML = '';
+    
+    ilgili.forEach(m => {
+      const tip = m.GonderenId == benimId ? 'giden' : 'gelen';
+      const tarih = new Date(m.Tarih);
+      tarih.setHours(tarih.getHours() - 3); 
+      const saat = tarih.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      const el = document.createElement('div');
+      el.className = 'mesaj ' + tip;
+      
+      let tikHtml = '';
+      if (tip === 'giden') {
+          tikHtml = m.OkunmaDurumu == 1 
+            ? `<i class="fas fa-check-double tik-ikon"></i>` 
+            : `<i class="fas fa-check tik-ikon" style="color: #8696a0;"></i>`;
+      }
+
+      el.innerHTML = `
+        <div>${m.Mesaj.replace(/\n/g, '<br>')}</div>
+        <div class="mesaj-alt">
+            <span class="zaman">${saat}</span>
+            ${tikHtml}
+        </div>
+      `;
+      div.appendChild(el);
+    });
+
+    div.scrollTop = div.scrollHeight;
+    
+  } catch (err) {
+    console.error('Mesajlar yüklenemedi:', err);
+  }
+}
+
+async function gonder() {
+  const input = document.getElementById('yeniMesaj');
+  const mesaj = input.value.trim();
+  if (!mesaj || !seciliId) return;
+
+  input.value = ''; 
+  try {
+    await fetch('/api/mesaj-gonder', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body: JSON.stringify({aliciId:seciliId, mesaj})
+    });
+    yukleMesajlar();
+  } catch (err) {
+    console.error("Mesaj gönderilemedi:", err);
+  }
+}
+
+async function mesajlariTemizle() {
+  if (confirm("Bu kişiyle olan tüm sohbet geçmişiniz silinecek. Emin misiniz?")) {
+    await fetch('/api/mesaj-sil', {method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+token}, body:JSON.stringify({karsiId:seciliId})});
+    oncekiMesajSayisi = 0;
+    yukleMesajlar(); 
+    yukleKullanicilar();
+  }
+}
+
+document.getElementById('yeniMesaj').addEventListener('keypress', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); gonder(); }
+});
+
+setInterval(() => { if(seciliId) yukleMesajlar(); }, 3000);
+
+window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hedefId = urlParams.get('id') || urlParams.get('targetUser');
+    
+    if(hedefId) {
+        let denemeSayisi = 0;
+        const aramaInterval = setInterval(() => {
+            denemeSayisi++;
+            const eleman = document.querySelector(`[data-id="${hedefId}"]`);
+            if (eleman) {
+                eleman.click();
+                clearInterval(aramaInterval);
+            }
+            if (denemeSayisi > 10) clearInterval(aramaInterval);
+        }, 500);
+    }
+});
+</script>
+</body>
+</html>

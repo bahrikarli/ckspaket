@@ -57,7 +57,11 @@ const PDFKitDocument = require('pdfkit');
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+const ozelSayfaStatic = new Set(['/', '/index.html', '/anasayfa.html']);
+app.use((req, res, next) => {
+  if (ozelSayfaStatic.has(req.path)) return next();
+  express.static(__dirname, { index: false })(req, res, next);
+});
 // Uploads klasörü oluştur
 // 🎯 SİHİRLİ YOL BULUCU: Program .exe ise dışarıdaki gerçek klasörü, kod ise bulunduğu yeri bulur.
 const gercekKlasor = process.pkg ? path.dirname(process.execPath) : __dirname;
@@ -91,6 +95,7 @@ const upload = multer({
   }
 });
 const getPool = require('./config');
+const { kurumGenelOku, htmlKurumEnjekte } = require('./kurum-ayar');
 const {
   VARSAYILAN: SISTEM_AYAR_VARSAYILAN,
   sistemAyarBirlestir,
@@ -275,8 +280,36 @@ const sadeceAdminSayfa = (req, res, next) => {
 app.use('/api', require('./auth'));
 
 // TÜM SAYFALAR
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
+app.get('/', async (req, res) => {
+  try {
+    const kurum = await kurumGenelOku(getPool);
+    let html = fs.readFileSync(path.join(gercekKlasor, 'index.html'), 'utf8');
+    html = htmlKurumEnjekte(html, kurum.kurum_adi, ' - Personel Girişi');
+    res.type('html').send(html);
+  } catch (_) {
+    res.sendFile(path.join(gercekKlasor, 'index.html'));
+  }
+});
+app.get('/index.html', async (req, res) => {
+  try {
+    const kurum = await kurumGenelOku(getPool);
+    let html = fs.readFileSync(path.join(gercekKlasor, 'index.html'), 'utf8');
+    html = htmlKurumEnjekte(html, kurum.kurum_adi, ' - Personel Girişi');
+    res.type('html').send(html);
+  } catch (_) {
+    res.sendFile(path.join(gercekKlasor, 'index.html'));
+  }
+});
+app.get('/anasayfa.html', authenticateToken, async (req, res) => {
+  try {
+    const kurum = await kurumGenelOku(getPool);
+    let html = fs.readFileSync(path.join(gercekKlasor, 'anasayfa.html'), 'utf8');
+    html = htmlKurumEnjekte(html, kurum.kurum_adi, ' — CKS Paket');
+    res.type('html').send(html);
+  } catch (_) {
+    res.sendFile(path.join(gercekKlasor, 'anasayfa.html'));
+  }
+});
 app.get('/dashboard.html', authenticateToken, sadeceAdmin, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/mesajlar.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesajlar.html')));
 app.get('/profil.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'profil.html')));
@@ -8050,6 +8083,16 @@ app.delete('/api/vtcks/:kimlik', async (req, res) => {
 });
 
 // Örnek bir Express route yapısı
+/** Oturumsuz sayfalar için kurum adı (Tanımlamalar → Ana Kurum) */
+app.get('/api/kurum-genel', async (_req, res) => {
+  try {
+    const data = await kurumGenelOku(getPool);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Kurum ayarlarını getir
 app.get('/api/kurum-ayarlari', authenticateToken, async (req, res) => {
     try {

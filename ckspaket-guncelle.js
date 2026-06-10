@@ -37,7 +37,7 @@ const KOPYALA = [
 ];
 
 const KORU = new Set([
-  'anasayfa.html', 'arsiv.html', 'dashboard.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'anasayfa.html', 'index.html', 'kurum-baslik.js', 'kurum-ayar.js', 'arsiv.html', 'dashboard.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
   'baslat.bat', 'baslat-gizli.vbs', 'durdur.bat', 'baslat-launcher.vbs', 'kisayol-olustur.vbs', 'sunucu-gizli.bat', 'sunucu-test.bat', 'sql-baglanti-test.bat', 'icon',
   'ckspaket-paketle.js', 'ckspaket-paketle.bat', 'ckspaket-musteri-surum.bat',

@@ -5295,7 +5295,7 @@ async function ustYaziYukleButonunaBas(targetFrame) {
         }
     });
 }
-
+//deneme
 async function ustYaziFileInputIndex(targetFrame) {
     return targetFrame.evaluate(() => {
         const inputs = Array.from(document.querySelectorAll('input[type="file"]'))

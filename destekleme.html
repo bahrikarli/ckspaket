@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Destekleme Dilekçesi + Bilgi Taahhüt Formu</title>
+
+<style>
+  body {font-family:"Times New Roman",serif; margin:0; padding:20px 35px; font-size:14px; max-width:950px; margin:0 auto;}
+  .no-print {position:fixed; top:15px; right:25px; padding:12px 40px; background:#c62828; color:white; border:none; border-radius:8px; font-size:18px; cursor:pointer; z-index:9999;}
+
+  /* === 1. SAYFA - DESTEKLEME DİLEKÇESİ === */
+  .header {text-align:center; border-top:3px double #000; padding-top:8px; font-weight:bold; font-size:16px; margin-bottom:25px;}
+  .to {text-align:center; font-weight:bold; font-size:16px; margin-bottom:30px;}
+  p {text-align:justify; margin:12px 0; line-height:1.5;}
+  .info {margin:40px 0 30px; font-size:14.5px;}
+  .info div {margin:10px 0;}
+  .info strong {display:inline-block; width:150px;}
+  table.main, .bottom-table {width:100%; border-collapse:collapse; margin:25px 0; font-size:12px;}
+  table.main td, .bottom-table td {border:1px solid #000; padding:7px; text-align:center; vertical-align:middle;}
+  .gray {background:#f0f0f0; font-weight:bold;}
+  .x {font-weight:bold; font-size:19px;}
+
+  /* === 2. SAYFA - BİLGİ PAYLAŞIM FORMU === */
+  .page2 {page-break-before:always; margin-top:30px;}
+  .page2 h3 {text-align:center; font-size:20px; margin:40px 0 50px; font-weight:normal;}
+  .page2 table {width:100%; border-collapse:collapse; margin-bottom:80px; font-size:15px;}
+  .page2 td {border:1px solid #000; padding:15px 18px; vertical-align:top;}
+  .baslik {width:200px; background:#f5f5f5; text-align:center; font-weight:bold; font-size:15px;}
+  .evet {font-weight:bold; margin-right:40px;}
+  .hayir {opacity:0.4;}
+  .kabul {text-align:center; font-weight:bold; font-size:16.5px; margin-top:12px;}
+  .alt-kisim {text-align:center; font-size:16px; line-height:2.6;}
+  .yatay {display:inline-block; width:320px; text-align:left;}
+  .yatay strong {display:inline-block; width:130px;}
+  .imza-cizgi {border-top:2px solid #000; width:340px; margin:40px auto 0;}
+
+  @media print {
+    body {padding:10mm;}
+    .no-print {display:none;}
+  
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    html, body {
+      margin: 0 !important;
+      padding: 10mm !important;
+    }
+
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<button class="no-print" onclick="window.print()">Yazdır / PDF Kaydet</button>
+
+<div class="page1">
+  <div class="header">DESTEKLEME ÖDEMESİ BAŞVURU DİLEKÇESİ  Ek-3</div>
+  <div class="to"><span class="dinamik-kurum">Yükleniyor...</span> BAŞKANLIĞINA</div>
+
+  <p>5488 sayılı Tarım Kanununun 19 uncu maddesi ve 2025-2027 Yıllarında Yapılacak Bitkisel Üretime Yönelik Desteklemeler ile Diğer Bazı Tarımsal Desteklemelere Ödeme Yapılmasına Dair Tebliğ (2024/39) gereğince destekleme uygulamalarında ayrıntıları verilen Bakanlık kayıt sistemlerine kayıtlı olan ve söz konusu Tebliğ hükümlerine uyacak şekilde tarımsal üretimde bulunduğum tarım arazileri için destekleme talep formunda (EK-4) işaretlemiş olduğum desteklemelerden yararlandırılmam ve bu ödemelerin T.C. Ziraat Bankasında açılan/açılacak hesabıma aktarılması için gereğini arz ederim.</p>
+
+  <p>Destekleme müracaatlarına ilişkin istenilen belgileri Tebliğde belirtilen süresi içerisinde <span class="dinamik-ortak-kurum">İlçe Tarım Müdürlüğüne</span>'ne teslim etmediğim takdirde desteklemelerden yararlandırılmayacağımı ayrıca ödemeye ilişkin düzenlenen ve askı icmallere itiraz etmediğim takdirde kesinleşmiş icmal bilgilerinin doğruluğunu kabul etmiş sayılacağımı, haksız ödeme tespitinde 6183 sayılı Kanun gereği faizle geri vereceğimi kabul ve taahhüt ederim. <span id="tarih1"></span></p>
+
+  <p>27 Mayıs 2014 tarih ve 29012 sayılı Resmi Gazete’de yayımlanarak yürürlüğe giren Çiftçi Kayıt Sistemi Yönetmeliği’nin 20. maddesindeki veri paylaşım hükmünü okudum. ÇKS’de yer alan bilgilerimin Tarım ve Orman Bakanlığı’nın belirlediği şartlarda paylaşılmasını kabul ediyorum. <span id="tarih2"></span></p>
+
+  <div class="info">
+    <div><strong>Adı Soyadı / Unvanı</strong> : <span id="adsoyad1">-</span></div>
+    <div><strong>TC Kimlik No</strong>        : <span id="tc1">-</span></div>
+    <div><strong>Telefon No</strong>        : <span id="tel1">-</span></div>
+    <div><strong>Adresi</strong>            : <span id="adres1">-</span></div>
+    <div><strong>İmzası</strong>            : </div>
+  </div>
+
+  <table class="bottom-table">
+    <tr><td>Evrak Kayıt Tarihi</td>        <td id="basvuruTarihi"></td></tr>
+    <tr><td>Evrak Kayıt Numarası</td>      <td id="dilekceNo"></td></tr>
+    <tr><td>Döner Sermaye Makbuz No</td>   <td>.................</td></tr>
+    <tr><td>Dilekçeyi Kabul Eden Personel</td> <td id="kullanici"></td></tr>
+  </table>
+
+<table class="main">
+  <tr><td class="gray" rowspan="2">Sıra No</td><td class="gray" rowspan="2">Bu alanda işaretleme yapınız.</td><td class="gray" rowspan="2">Destek Adı</td><td class="gray" colspan="2">Belge Teslim Tarihi</td><td class="gray" rowspan="2">İstenilen Belgeler</td></tr>
+  <tr><td class="gray">Başlangıç Tarihi</td><td class="gray">Bitiş Tarihi</td></tr>
+  <tr><td>1</td><td class="x">X</td><td>Temel Destek</td><td>İlgili üretim yılı ÇKS kayıt başlangıç tarihi</td><td>İlgili üretim yılı ÇKS kayıt bitiş tarihi</td><td>İlgili üretim yılında ÇKS'ye kayıtlı olmak.</td></tr>
+  <tr><td>2</td><td class="x">X</td><td>Planlı Üretim Desteği</td><td>İlgili üretim yılı ÇKS kayıt başlangıç tarihi</td><td>İlgili üretim yılı ÇKS kayıt bitiş tarihi</td><td>İlgili üretim yılında ÇKS'ye kayıtlı olmak.</td></tr>
+  <tr><td>3</td><td class="x">X</td><td>Katı-Organik Organomineral Gübre Desteği</td><td>İlgili üretim yılı ÇKS kayıt başlangıç tarihi</td><td>İlgili üretim yılı ÇKS kayıt bitiş tarihi</td><td>GTS'de ilgili üretim yılı için satış kaydı bulunması</td></tr>
+</table>
+</div>
+
+<div class="page2">
+  <h3>BİLGİ PAYLAŞIM TAAHHÜT FORMU</h3>
+
+  <table>
+    <tr>
+      <td class="baslik">1-Bilgi Paylaşımı</td>
+      <td>
+        6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında Çiftçi Kayıt Sisteminde kayıtlı bilgilerimin Tarım ve Orman Bakanlığı’nın belirlediği şartlarda paylaşılmasını kabul ediyorum.<br><br>
+        <span class="evet">[X] Evet</span> <span class="hayir">[ ] Hayır</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="baslik">2-Ziraat Odası Kaydı</td>
+      <td>
+        Arazi/arazilerimin bulunduğu İl/İlçe Ziraat Odalarından herhangi birinde kayıtlı bir çiftçi olduğumu;<br><br>
+        <strong>Taahhüt Ederim.</strong>
+      </td>
+    </tr>
+    <tr>
+      <td class="baslik">3-Başvuru Ödemesi</td>
+      <td>
+        ÇKS’ye başvuru ücretinin tarafıma yapılacak olan tarımsal destek ödemesinden mahsup edilmesini;<br><br>
+        <div class="kabul">Kabul Ederim.  <span id="tarih3"></span></div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="alt-kisim">
+    <div class="yatay"><strong>AD SOYAD</strong> : <span id="adsoyad2">-</span></div>
+    <div class="yatay"><strong>TC Kimlik No</strong> : <span id="tc2">-</span></div>
+    <div class="yatay"><strong>Tel No</strong> : <span id="tel2">-</span></div>
+    <div class="yatay"><strong>Mahalle/Köy</strong> : <span id="mahalle2">-</span></div>
+    <div class="yatay"><strong>İmza</strong> : </div>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const token = localStorage.getItem('token');
+const kimlik = params.get('kimlik');
+
+// URL'den gelen geçici veriler (Veritabanı gelene kadar boş durmasın diye)
+const urlAd = decodeURIComponent(params.get('adsoyad') || '').trim() || 'BİLİNMEYEN';
+const urlTc = (params.get('tc') || '').trim();
+const urlTel = params.get('tel') || '';
+const urlIlceKoy = decodeURIComponent(params.get('ilcekoy') || '').trim();
+
+document.getElementById('adsoyad1').textContent = urlAd;
+document.getElementById('tc1').textContent      = urlTc;
+document.getElementById('tel1').textContent     = urlTel;
+document.getElementById('adres1').textContent   = urlIlceKoy;
+
+document.getElementById('adsoyad2').textContent = urlAd;
+document.getElementById('tc2').textContent      = urlTc;
+document.getElementById('tel2').textContent     = urlTel;
+document.getElementById('mahalle2').textContent = urlIlceKoy;
+
+// Tarih alanlarını sıfırla
+const tarihAlanlari = ['tarih1', 'tarih2', 'tarih3', 'basvuruTarihi'];
+tarihAlanlari.forEach(id => document.getElementById(id).textContent = '');
+
+// --- YENİ EKLENEN: GARANTİLİ KURUM AYARLARI ÇEKİMİ ---
+fetch('/api/kurum-ayarlari', {
+    headers: { 'Authorization': 'Bearer ' + token }
+})
+.then(r => r.json())
+.then(res => {
+    if (res && res.success && res.data) {
+        const ayar = res.data;
+        const anaKurum = ayar.kurum_adi || 'SARAYÖNÜ ZİRAAT ODASI';
+        const ortakKurum = ayar.ortak_kurum_adi || 'İlçe Tarım Müdürlüğü';
+        
+        document.querySelectorAll('.dinamik-kurum').forEach(el => el.textContent = anaKurum);
+        document.querySelectorAll('.dinamik-ortak-kurum').forEach(el => el.textContent = ortakKurum);
+    } else {
+        document.querySelectorAll('.dinamik-kurum').forEach(el => el.textContent = 'SARAYÖNÜ ZİRAAT ODASI');
+        document.querySelectorAll('.dinamik-ortak-kurum').forEach(el => el.textContent = 'İlçe Tarım Müdürlüğü');
+    }
+})
+.catch(err => {
+    console.error("Kurum ayarları çekilirken hata:", err);
+    document.querySelectorAll('.dinamik-kurum').forEach(el => el.textContent = 'SARAYÖNÜ ZİRAAT ODASI');
+    document.querySelectorAll('.dinamik-ortak-kurum').forEach(el => el.textContent = 'İlçe Tarım Müdürlüğü');
+});
+// --------------------------------------------------------
+
+if (kimlik && token) {
+    // 1. ZEKİ SİSTEM: ÇİFTÇİ BİLGİLERİNİ DOĞRUDAN VERİTABANINDAN ÇEKİYORUZ
+    fetch(`/api/getir-ciftci/${kimlik}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(r => r.json())
+    .then(ciftci => {
+        if (ciftci) {
+            // TÜRÜ VERİTABANINDAN KESİN OLARAK ÖĞREN
+            const gercekTur = ciftci.tur || ((ciftci.vergino && String(ciftci.vergino).length === 10) ? 'TUZEL' : 'GERCEK');
+            
+            // EĞER ŞİRKET İSE YAZILARI ACIMADAN DEĞİŞTİR
+            if (gercekTur === 'TUZEL') {
+                document.querySelectorAll('strong').forEach(etiket => {
+                    if (etiket.textContent.includes('TC Kimlik No')) etiket.textContent = 'Vergi Numarası';
+                    if (etiket.textContent.includes('AD SOYAD')) etiket.textContent = 'ŞİRKET UNVANI';
+                    if (etiket.textContent.includes('Adı Soyadı / Unvanı')) etiket.textContent = 'Şirket Unvanı';
+                });
+            }
+
+            // DEĞERLERİ VERİTABANINDAKİ EN DOĞRU HALİYLE DOLDUR
+            const guncelAd = ciftci['Adı Soyadı'] || urlAd;
+            const guncelNo = (gercekTur === 'TUZEL') ? (ciftci.vergino || '') : (ciftci['Tc Kimlik No'] || '');
+            const guncelTel = ciftci.Telefon || ciftci.telefon || urlTel;
+            const guncelAdres = (ciftci['İlçe'] && ciftci['Köy/Mahalle']) ? (ciftci['İlçe'] + ' / ' + ciftci['Köy/Mahalle']) : urlIlceKoy;
+
+            document.getElementById('adsoyad1').textContent = guncelAd;
+            document.getElementById('adsoyad2').textContent = guncelAd;
+            
+            document.getElementById('tc1').textContent = guncelNo;
+            document.getElementById('tc2').textContent = guncelNo;
+            
+            document.getElementById('tel1').textContent = guncelTel;
+            document.getElementById('tel2').textContent = guncelTel;
+
+            document.getElementById('adres1').textContent = guncelAdres;
+            document.getElementById('mahalle2').textContent = guncelAdres;
+        }
+    })
+    .catch(err => console.error("Çiftçi bilgisi çekilemedi:", err));
+
+    // 2. DİLEKÇE EK BİLGİLERİNİ ÇEK (Tarih, Dilekçe No vs.)
+    fetch(`/api/dilekce-ek-bilgi/${kimlik}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(r => r.json())
+    .then(veri => {
+        if (veri.success && veri.data && veri.data.length > 0) {
+            const d = veri.data[0];
+            document.getElementById('dilekceNo').textContent = d.dilekçeno || '—';
+            document.getElementById('kullanici').textContent = d.kullanıcıı || 'Personel';
+            
+            let gelenTarih = d.başvurutarihi || d.tarih || d.tarihi || '';
+            if (gelenTarih) {
+                try {
+                    const tarihObj = new Date(gelenTarih);
+                    if (!isNaN(tarihObj)) {
+                        gelenTarih = tarihObj.toLocaleDateString('tr-TR'); 
+                    }
+                } catch(e) {}
+                tarihAlanlari.forEach(id => document.getElementById(id).textContent = gelenTarih);
+            }
+        }
+    })
+    .catch(() => {
+        document.getElementById('dilekceNo').textContent = '—';
+        document.getElementById('kullanici').textContent = 'Personel';
+    });
+} else {
+    document.getElementById('dilekceNo').textContent = '—';
+    document.getElementById('kullanici').textContent = 'Personel';
+}
+
+// --- OTOMATİK YAZDIRMA VE KAPANMA ---
+window.addEventListener('load', function() {
+    // Veritabanından verilerin gelmesi için 800 milisaniye bekle
+    setTimeout(function() {
+        window.print();
+    }, 800); 
+});
+
+window.addEventListener('afterprint', function() {
+    window.close(); 
+});
+
+let printTriggered = false;
+window.addEventListener('beforeprint', function() {
+    printTriggered = true;
+});
+
+window.addEventListener('blur', function() {
+    if (printTriggered) {
+        setTimeout(window.close, 300);
+    }
+});
+</script>
+
+</body>
+</html>

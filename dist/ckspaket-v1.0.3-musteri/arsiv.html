@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Arşiv — Odalar ve ÇKS Dosyaları</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f0f2f5; color: #333; }
+        .header { background: #ffd64f; padding: 15px 25px; font-size: 22px; font-weight: 700; color: #2c3e50; border-bottom: 3px solid #e5bd35; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .container { display: flex; height: calc(100vh - 61px); }
+        .sidebar { width: 220px; background: #2b579a; color: white; padding-top: 10px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display:flex; flex-direction:column;}
+        .sidebar div { padding: 14px 20px; cursor: pointer; font-size: 14px; font-weight: 500; letter-spacing: 0.5px; transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .sidebar div:hover { background: #1e3f73; border-left: 4px solid #ffd64f; }
+        .sidebar .active { background: #1e3f73; color: #ffd64f; font-weight: 700; border-left: 4px solid #ffd64f; }
+        .content { flex: 1; padding: 30px; display: flex; gap: 30px; overflow: hidden; position: relative;}
+        .ekran-icerik { display: flex; width: 100%; gap: 30px; height: 100%; }
+        .form-section { width: 350px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow-y: auto;}
+        .form-section h2 { margin-top: 0; color: #2b579a; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-bottom: 25px; }
+        .form-group { display: flex; align-items: center; margin-bottom: 18px; justify-content: space-between; }
+        .form-group label { width: 105px; font-weight: 600; font-size: 13px; color: #555; }
+        .form-group input, .form-group select { flex: 1; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px; outline: none; }
+        .form-group input:focus { border-color: #2b579a; box-shadow: 0 0 0 3px rgba(43, 87, 154, 0.1); }
+        .input-oda { cursor: pointer; background-color: #e8f0fe; border-color: #c2d6f5 !important; font-weight: bold; text-align: center; }
+        .btn-container { text-align: right; margin-top: 10px; margin-bottom: 30px; }
+        .btn { padding: 9px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-primary { background: linear-gradient(180deg, #e8f0fe 0%, #d2e3fc 100%); color: #1967d2; border: 1px solid #c2d6f5; }
+        .divider { height: 1px; background: #eee; margin: 10px 0 25px 0; }
+        .table-section { flex: 1; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+        .table-wrapper { flex: 1; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border-bottom: 1px solid #eee; padding: 12px 15px; text-align: left; vertical-align: middle; }
+        th { background: #f8f9fa; color: #495057; font-weight: 600; position: sticky; top: 0; border-bottom: 2px solid #dee2e6; z-index: 1; }
+        tr:hover td { background-color: #f8f9fa; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
+        .modal-content-large { background: white; padding: 25px; border-radius: 12px; width: 750px; max-width: 95%; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #888; }
+        .oda-resim-kutu { width: 100%; height: 250px; background: #eee; border-radius: 8px; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px dashed #ccc; }
+        .oda-resim-kutu img { width: 100%; height: 100%; object-fit: cover; }
+        .oda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; padding: 10px 5px; }
+        .oda-card { background: #fff; border: 2px solid #eee; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .oda-card:hover { transform: translateY(-3px); border-color: #2b579a; box-shadow: 0 5px 15px rgba(43,87,154,0.2); }
+        .oda-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .oda-card .oda-no { font-weight: bold; color: #2b579a; font-size: 16px; margin-bottom: 3px;}
+        .oda-card .oda-adi { font-size: 12px; color: #666; }
+        .modal-oda-onizleme { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 2px dashed #ced4da; margin-top: 5px; margin-bottom: 10px; display: none; }
+        .canli-etiket-vtcks { width: 50mm; height: 80mm; max-height: 80mm; background: white; border: 1px dashed #999; padding: 4mm; box-sizing: border-box; text-align: center; font-family: Arial, sans-serif; display: flex; flex-direction: column; justify-content: space-between; align-items: center; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin: 0 auto; }
+        .v-tur { font-size: 28pt; font-weight: bold; line-height: 1; margin-top: 2mm;}
+        .v-yil { font-size: 34pt; font-weight: bold; line-height: 0.9; }
+        .v-yil-yazi { font-size: 14pt; font-weight: bold; line-height: 1; }
+        .v-cizgi { width: 95%; border: 0; border-top: 2px solid black; margin: 1mm 0; }
+        .v-alan1 { font-size: 65pt; font-weight: bold; line-height: 0.8; margin: 1mm 0;}
+        .v-tarih { font-size: 18pt; font-weight: bold; line-height: 1; letter-spacing: -0.5px; margin-bottom: 2mm; width: 100%; word-wrap: break-word;}
+    </style>
+</head>
+<body>
+
+    <div class="header">ARŞİV — ODALAR &amp; ÇKS DOSYALARI</div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div id="btnOdalar" class="active" onclick="sekmeDegistir('odalar')">ODALAR</div>
+            <div id="btnVtcks" onclick="sekmeDegistir('vtcks')">ÇKS DOSYALARI</div>
+        </div>
+
+        <div class="content">
+
+            <div id="ekranOdalar" class="ekran-icerik">
+                <div class="form-section">
+                    <h2>ODA TANIMLARI</h2>
+                    <div class="form-group"><label>Oda No</label><input type="number" id="odaNo" placeholder="Örn: 1"></div>
+                    <div class="form-group"><label>Oda Adı</label><input type="text" id="odaAdi" placeholder="Örn: Arşiv Odası"></div>
+                    <div class="btn-container"><button class="btn btn-primary" onclick="odalarEkle()"><i class="fas fa-plus"></i> EKLE</button></div>
+                    <div style="margin-top:20px; font-size:12px; color:#666; background:#fff3cd; padding:10px; border-radius:5px; border-left:4px solid #ffc107;">
+                        <i class="fas fa-info-circle"></i> <b>Resim:</b> Oda resimlerini <code>/public/img/odalar/</code> klasörüne <b>OdaNo.jpg</b> (örn. 1.jpg) olarak kaydedin.
+                    </div>
+                </div>
+                <div class="table-section"><div class="table-wrapper"><table><thead><tr><th style="width:60px;">Görsel</th><th>Oda No</th><th>Oda Adı</th></tr></thead><tbody id="tabloGövdesiOdalar"></tbody></table></div></div>
+            </div>
+
+            <div id="ekranVtcks" class="ekran-icerik" style="display: none;">
+                <div class="form-section" style="width: 380px;">
+                    <h2>ÇKS DOSYALARI</h2>
+                    <p style="font-size:12px;color:#666;margin:-15px 0 20px;">Her kayıt bir klasör numarası (Alan1) ve hangi odada olduğunu tutar.</p>
+                    <div class="form-group"><label>Defter Türü</label><input type="text" id="vtcksTur" value="Ç.K.S." readonly style="background:#eee;"></div>
+                    <div class="form-group"><label>Yıl (Açıklama)</label><input type="text" id="vtcksAciklama" value="2026"></div>
+                    <div class="form-group"><label>Defter Aralığı</label><input type="text" id="vtcksTarih" placeholder="Örn: 26-51"></div>
+                    <div class="form-group"><label>Oda</label><input type="text" id="vtcksOda" class="input-oda" readonly placeholder="Tıklayıp Seçin" onclick="odaSecimiAc('vtcksOda')"></div>
+                    <img id="img_vtcksOda" class="modal-oda-onizleme">
+                    <div class="btn-container"><button class="btn btn-primary" onclick="vtcksEkle()"><i class="fas fa-plus"></i> EKLE</button></div>
+                    <div class="divider"></div>
+                    <div class="form-group"><label>İlk sayfa</label><input type="number" id="vtcksIlkSayfa" placeholder="Klasör No"></div>
+                    <div class="form-group"><label>Son sayfa</label><input type="number" id="vtcksSonSayfa" placeholder="Klasör No"></div>
+                    <div class="btn-container" style="margin-bottom: 0;"><button class="btn btn-primary" onclick="argoxCiktiAlVtcks()"><i class="fas fa-print"></i> ETİKET YAZDIR</button></div>
+                </div>
+                <div class="table-section"><div class="table-wrapper"><table><thead><tr><th>Klasör (Alan1)</th><th>Tür</th><th>Aralık</th><th>Yıl</th><th>ODA</th></tr></thead><tbody id="tabloGövdesiVtcks"></tbody></table></div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="odaSecimModal" class="modal-overlay" style="z-index: 10005;">
+        <div class="modal-content-large" style="width: 750px; max-height: 85vh; display: flex; flex-direction: column;">
+            <span class="close-btn" onclick="document.getElementById('odaSecimModal').style.display='none'">&times;</span>
+            <h3 style="margin-top:0; color:#2b579a; border-bottom:2px solid #eee; padding-bottom:10px;">Lütfen Bir Oda Seçin</h3>
+            <div style="flex: 1; overflow-y: auto;">
+                <div id="odaGridContainer" class="oda-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="duzenleModalOdalar" class="modal-overlay">
+        <div class="modal-content-large" style="width: 500px;">
+            <span class="close-btn" onclick="document.getElementById('duzenleModalOdalar').style.display='none'">&times;</span>
+            <h3 style="margin-top:0; color:#2b579a; border-bottom:2px solid #eee; padding-bottom:10px;">Oda Düzenle</h3>
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+                <div class="oda-resim-kutu"><img id="previewOdaResim" src="" onerror="this.onerror=null; this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22500%22 height=%22250%22%3E%3Crect width=%22500%22 height=%22250%22 fill=%22%23ddd%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2224px%22 fill=%22%23555%22%3EResim Yok%3C/text%3E%3C/svg%3E';"></div>
+                <input type="hidden" id="editOdaKimlik">
+                <div class="form-group" style="margin-bottom:0;"><label style="width:70px;">Oda No</label><input type="number" id="editOdaNo"></div>
+                <div class="form-group" style="margin-bottom:0;"><label style="width:70px;">Oda Adı</label><input type="text" id="editOdaAdi"></div>
+                <div style="display:flex; justify-content:space-between; margin-top: 15px;">
+                    <button class="btn" style="background:#dc3545; color:white;" onclick="odalarSil()"><i class="fas fa-trash"></i> SİL</button>
+                    <button class="btn btn-primary" onclick="odalarGuncelle()"><i class="fas fa-save"></i> GÜNCELLE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="duzenleModalVtcks" class="modal-overlay">
+        <div class="modal-content-large">
+            <span class="close-btn" onclick="document.getElementById('duzenleModalVtcks').style.display='none'">&times;</span>
+            <h3 style="margin-top:0; color:#2b579a; border-bottom:2px solid #eee; padding-bottom:10px;">ÇKS Dosyası Düzenle</h3>
+            <div style="display: flex; gap: 30px; margin-top: 20px;">
+                <div style="flex: 1; display:flex; flex-direction: column; gap: 10px;">
+                    <input type="hidden" id="editVtcksKimlik">
+                    <div class="form-group"><label>Klasör No</label><input type="text" id="editVtcksAlan1" readonly style="background:#eee;"></div>
+                    <div class="form-group"><label>Defter Türü</label><input type="text" id="editVtcksTur" readonly style="background:#eee;"></div>
+                    <div class="form-group"><label>Yıl</label><input type="text" id="editVtcksAciklama" oninput="canliOnizlemeVtcks()"></div>
+                    <div class="form-group"><label>Dosya Aralığı</label><input type="text" id="editVtcksTarih" oninput="canliOnizlemeVtcks()"></div>
+                    <div class="form-group"><label>Oda</label><input type="text" id="editVtcksOda" class="input-oda" readonly placeholder="Oda Değiştir" onclick="odaSecimiAc('editVtcksOda')"></div>
+                    <img id="img_editVtcksOda" class="modal-oda-onizleme">
+                    <div style="display:flex; justify-content:space-between; margin-top: auto;">
+                        <button class="btn" style="background:#dc3545; color:white;" onclick="vtcksSil()"><i class="fas fa-trash"></i> SİL</button>
+                        <div>
+                            <button class="btn" style="background:#28a745; color:white;" onclick="tekEtiketYazdir('canli-etiket-vtcks', 'vtcks')"><i class="fas fa-print"></i> ÇIKTI AL</button>
+                            <button class="btn btn-primary" onclick="vtcksGuncelle()"><i class="fas fa-save"></i> GÜNCELLE</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex: 1; display: flex; justify-content: center; align-items: center; background: #f8f9fa; border-radius: 8px; padding: 10px;">
+                    <div class="canli-etiket-vtcks" id="canli-etiket-vtcks">
+                        <div id="previewVtcksTur" class="v-tur">Ç.K.S.</div>
+                        <div id="previewVtcksYil" class="v-yil">2026</div>
+                        <div class="v-yil-yazi">YILI</div>
+                        <hr class="v-cizgi">
+                        <div id="previewVtcksAlan1" class="v-alan1">2</div>
+                        <hr class="v-cizgi">
+                        <div id="previewVtcksTarih" class="v-tarih">26-51</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let odalarVerileri = [];
+        let vtcksVerileri = [];
+        let aktifOdaInputId = '';
+
+        document.addEventListener("DOMContentLoaded", () => { odalarGetir(); });
+
+        function sekmeDegistir(sekmeAdi) {
+            document.querySelectorAll('.sidebar div').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.ekran-icerik').forEach(el => el.style.display = 'none');
+            if (sekmeAdi === 'odalar') {
+                document.getElementById('btnOdalar').classList.add('active');
+                document.getElementById('ekranOdalar').style.display = 'flex';
+                odalarGetir();
+            } else if (sekmeAdi === 'vtcks') {
+                document.getElementById('btnVtcks').classList.add('active');
+                document.getElementById('ekranVtcks').style.display = 'flex';
+                vtcksGetir();
+            }
+        }
+
+        async function odalarGetir() {
+            try {
+                const response = await fetch('/api/odalar');
+                odalarVerileri = await response.json();
+                const tbody = document.getElementById('tabloGövdesiOdalar');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                odalarVerileri.forEach(satir => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = "pointer";
+                    tr.ondblclick = () => odalarDetayAc(satir);
+                    tr.innerHTML = `
+                        <td style="text-align:center;">
+                            <img src="/img/odalar/${parseInt(satir.No)}.jpg" onerror="this.onerror=null; this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 fill=%22%23ddd%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2210px%22 fill=%22%23555%22%3EYok%3C/text%3E%3C/svg%3E';" style="width:40px; height:40px; border-radius:5px; object-fit:cover;">
+                        </td>
+                        <td><strong>${parseInt(satir.No)}</strong></td>
+                        <td>${satir.OdaAdi || ''}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) { console.error(error); }
+        }
+
+        async function odalarEkle() {
+            const no = document.getElementById('odaNo').value;
+            const adi = document.getElementById('odaAdi').value;
+            if (!no) return alert("Oda Numarası zorunlu!");
+            const res = await fetch('/api/odalar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ No: no, OdaAdi: adi }) });
+            if (res.ok) {
+                document.getElementById('odaNo').value = '';
+                document.getElementById('odaAdi').value = '';
+                odalarGetir();
+            } else alert("Hata oluştu.");
+        }
+
+        function odalarDetayAc(satir) {
+            document.getElementById('editOdaKimlik').value = satir.Kimlik;
+            document.getElementById('editOdaNo').value = parseInt(satir.No);
+            document.getElementById('editOdaAdi').value = satir.OdaAdi || '';
+            document.getElementById('previewOdaResim').src = `/img/odalar/${parseInt(satir.No)}.jpg`;
+            document.getElementById('duzenleModalOdalar').style.display = 'flex';
+        }
+
+        async function odalarGuncelle() {
+            const kimlik = document.getElementById('editOdaKimlik').value;
+            const payload = { No: document.getElementById('editOdaNo').value, OdaAdi: document.getElementById('editOdaAdi').value };
+            const res = await fetch(`/api/odalar/${kimlik}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) { alert("Güncellendi!"); document.getElementById('duzenleModalOdalar').style.display = 'none'; odalarGetir(); }
+        }
+
+        async function odalarSil() {
+            const kimlik = document.getElementById('editOdaKimlik').value;
+            if (!confirm("Emin misiniz?")) return;
+            const res = await fetch(`/api/odalar/${kimlik}`, { method: 'DELETE' });
+            if (res.ok) { document.getElementById('duzenleModalOdalar').style.display = 'none'; odalarGetir(); }
+        }
+
+        function odaSecimiAc(hedefInputId) {
+            aktifOdaInputId = hedefInputId;
+            const container = document.getElementById('odaGridContainer');
+            container.innerHTML = '';
+            if (odalarVerileri.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">Önce ODALAR menüsünden oda ekleyin.</p>';
+            } else {
+                const placeholderSvg = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23ddd%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2214px%22 fill=%22%23555%22%3EYok%3C/text%3E%3C/svg%3E";
+                odalarVerileri.forEach(oda => {
+                    const no = parseInt(oda.No);
+                    const div = document.createElement('div');
+                    div.className = 'oda-card';
+                    div.onclick = () => odaSecildi(no);
+                    div.innerHTML = `<img src="/img/odalar/${no}.jpg" onerror="this.onerror=null; this.src='${placeholderSvg}';"><div class="oda-no">Oda ${no}</div><div class="oda-adi">${oda.OdaAdi || 'İsimsiz'}</div>`;
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('odaSecimModal').style.display = 'flex';
+        }
+
+        function odaSecildi(odaNo) {
+            if (aktifOdaInputId) {
+                document.getElementById(aktifOdaInputId).value = odaNo;
+                odayiGorselleGuncelle(aktifOdaInputId, odaNo);
+            }
+            document.getElementById('odaSecimModal').style.display = 'none';
+        }
+
+        function odayiGorselleGuncelle(inputId, odaNo) {
+            const imgEl = document.getElementById('img_' + inputId);
+            if (imgEl && odaNo) {
+                imgEl.src = `/img/odalar/${parseInt(odaNo)}.jpg`;
+                imgEl.style.display = 'block';
+            }
+        }
+
+        function formOdaResminiSifirla(inputId) {
+            const imgEl = document.getElementById('img_' + inputId);
+            if (imgEl) { imgEl.style.display = 'none'; imgEl.src = ''; }
+        }
+
+        async function vtcksGetir() {
+            try {
+                const response = await fetch('/api/vtcks');
+                if (!response.ok) throw new Error("Sunucu hatası");
+                const data = await response.json();
+                if (!Array.isArray(data)) return;
+                vtcksVerileri = data.filter(d => !d.imhatarih && !d.imhasayi);
+                const tbody = document.getElementById('tabloGövdesiVtcks');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                vtcksVerileri.forEach(satir => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = "pointer";
+                    tr.ondblclick = () => vtcksDetayAc(satir);
+                    tr.innerHTML = `<td><strong style="font-size:16px;">${satir.Alan1}</strong></td><td>${satir.DefterTürü || ''}</td><td>${satir.DefterTarihi || ''}</td><td>${satir.Açıklama || ''}</td><td>${satir.ODA || ''}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) { console.error("VTÇKS:", error); }
+        }
+
+        async function vtcksEkle() {
+            const tur = document.getElementById('vtcksTur').value;
+            const aciklama = document.getElementById('vtcksAciklama').value;
+            const tarih = document.getElementById('vtcksTarih').value;
+            const oda = document.getElementById('vtcksOda').value;
+            if (!tur) return alert("Defter Türü zorunlu!");
+            const res = await fetch('/api/vtcks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ DefterTuru: tur, Aciklama: aciklama, DefterTarihi: tarih, Oda: oda }) });
+            if (res.ok) {
+                document.getElementById('vtcksAciklama').value = '2026';
+                document.getElementById('vtcksTarih').value = '';
+                document.getElementById('vtcksOda').value = '';
+                formOdaResminiSifirla('vtcksOda');
+                vtcksGetir();
+            } else alert("Hata oluştu.");
+        }
+
+        function vtcksDetayAc(satir) {
+            document.getElementById('editVtcksKimlik').value = satir.Kimlik;
+            document.getElementById('editVtcksAlan1').value = satir.Alan1;
+            document.getElementById('editVtcksTur').value = satir.DefterTürü || '';
+            document.getElementById('editVtcksAciklama').value = satir.Açıklama || '';
+            document.getElementById('editVtcksTarih').value = satir.DefterTarihi || '';
+            document.getElementById('editVtcksOda').value = satir.ODA || '';
+            odayiGorselleGuncelle('editVtcksOda', satir.ODA);
+            canliOnizlemeVtcks();
+            document.getElementById('duzenleModalVtcks').style.display = 'flex';
+        }
+
+        async function vtcksGuncelle() {
+            const kimlik = document.getElementById('editVtcksKimlik').value;
+            const payload = {
+                DefterTuru: document.getElementById('editVtcksTur').value,
+                Aciklama: document.getElementById('editVtcksAciklama').value,
+                DefterTarihi: document.getElementById('editVtcksTarih').value,
+                Oda: document.getElementById('editVtcksOda').value
+            };
+            const res = await fetch(`/api/vtcks/${kimlik}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) { alert("Güncellendi!"); document.getElementById('duzenleModalVtcks').style.display = 'none'; vtcksGetir(); }
+        }
+
+        async function vtcksSil() {
+            const kimlik = document.getElementById('editVtcksKimlik').value;
+            if (!confirm("Emin misiniz?")) return;
+            const res = await fetch(`/api/vtcks/${kimlik}`, { method: 'DELETE' });
+            if (res.ok) { document.getElementById('duzenleModalVtcks').style.display = 'none'; vtcksGetir(); }
+        }
+
+        function canliOnizlemeVtcks() {
+            document.getElementById('previewVtcksTur').innerText = document.getElementById('editVtcksTur').value || '-';
+            document.getElementById('previewVtcksYil').innerText = document.getElementById('editVtcksAciklama').value || '-';
+            document.getElementById('previewVtcksAlan1').innerText = document.getElementById('editVtcksAlan1').value || '-';
+            document.getElementById('previewVtcksTarih').innerText = document.getElementById('editVtcksTarih').value || '-';
+        }
+
+        function tekEtiketYazdir(etiketId, tip) {
+            const pw = window.open('', '_blank', 'width=500,height=700');
+            const el = document.getElementById(etiketId);
+            if (!el) { pw.close(); return; }
+            const css = `@page{size:50mm 80mm;margin:0;} .etiket{width:50mm;height:80mm;max-height:80mm;box-sizing:border-box;padding:4mm;text-align:center;font-family:Arial,sans-serif;display:flex;flex-direction:column;justify-content:space-between;align-items:center;overflow:hidden;margin:0;} .v-tur{font-size:28pt;font-weight:bold;line-height:1;margin-top:2mm;} .v-yil{font-size:34pt;font-weight:bold;line-height:0.9;} .v-yil-yazi{font-size:14pt;font-weight:bold;line-height:1;} .v-cizgi{width:95%;border:0;border-top:2px solid black;margin:1mm 0;} .v-alan1{font-size:65pt;font-weight:bold;line-height:0.8;margin:1mm 0;} .v-tarih{font-size:18pt;font-weight:bold;line-height:1;letter-spacing:-0.5px;margin-bottom:2mm;width:100%;word-wrap:break-word;}`;
+            pw.document.write(`<html><head><style>body{margin:0;padding:0;background:white;} ${css}</style></head><body><div class="etiket">${el.innerHTML}</div></body></html>`);
+            pw.document.close();
+            pw.onload = () => { pw.focus(); pw.print(); };
+        }
+
+        function argoxCiktiAlVtcks() {
+            const ilk = parseInt(document.getElementById('vtcksIlkSayfa').value);
+            const son = parseInt(document.getElementById('vtcksSonSayfa').value);
+            if (isNaN(ilk) || isNaN(son)) return alert("Aralık girin (Klasör No / Alan1).");
+            const veriler = vtcksVerileri.filter(v => v.Alan1 >= Math.min(ilk, son) && v.Alan1 <= Math.max(ilk, son));
+            if (veriler.length === 0) return alert("Kayıt yok!");
+            let html = `<html><head><style>@page{size:50mm 80mm;margin:0;} body{margin:0;padding:0;} .etiket{width:50mm;height:80mm;box-sizing:border-box;padding:4mm;text-align:center;font-family:Arial,sans-serif;page-break-after:always;display:flex;flex-direction:column;justify-content:space-between;} .v-tur{font-size:28pt;font-weight:bold;} .v-yil{font-size:34pt;font-weight:bold;} .v-yil-yazi{font-size:14pt;font-weight:bold;} .v-cizgi{width:95%;border:0;border-top:2px solid black;margin:1mm 0;} .v-alan1{font-size:65pt;font-weight:bold;} .v-tarih{font-size:18pt;font-weight:bold;}</style></head><body>`;
+            veriler.forEach(s => {
+                html += `<div class="etiket"><div class="v-tur">${s.DefterTürü || '-'}</div><div class="v-yil">${s.Açıklama || '-'}</div><div class="v-yil-yazi">YILI</div><hr class="v-cizgi"><div class="v-alan1">${s.Alan1}</div><hr class="v-cizgi"><div class="v-tarih">${s.DefterTarihi || '-'}</div></div>`;
+            });
+            html += `</body></html>`;
+            const pw = window.open('', '_blank', 'width=500,height=700');
+            pw.document.write(html);
+            pw.document.close();
+            pw.onload = () => { pw.focus(); pw.print(); };
+        }
+    </script>
+</body>
+</html>

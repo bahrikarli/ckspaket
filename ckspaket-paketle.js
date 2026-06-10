@@ -36,7 +36,6 @@ const MUSTERI_HARIC = new Set([
   'ckspaket-guncelle.js',
   'ckspaket-guncelle.bat',
   'ckspaket-sync.bat',
-  'git-guncelleme.js',
   'guncellemeler'
 ]);
 

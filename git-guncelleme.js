@@ -175,51 +175,139 @@ function gitYayinla(kok, surum, notlar) {
   return true;
 }
 
+function gitEnv() {
+  return { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+}
+
+function gitExec(komut, kok, stdio = 'inherit') {
+  execSync(komut, { cwd: kok, stdio, env: gitEnv() });
+}
+
+const GIT_KORU = new Set(['.env', 'taramalar', 'uploads', 'guncellemeler', 'node_modules', 'logs', '_guncelleme_yedek', '_git_klon']);
+
+function gitDosyalariKopyala(tmp, hedef) {
+  console.log('Korunan klasorler (degismez): taramalar, uploads, .env');
+  for (const ad of fs.readdirSync(tmp)) {
+    if (ad === '.git' || GIT_KORU.has(ad)) {
+      if (GIT_KORU.has(ad)) console.log('  atla:', ad);
+      continue;
+    }
+    const src = path.join(tmp, ad);
+    const dst = path.join(hedef, ad);
+    console.log('  ->', ad);
+    if (fs.statSync(src).isDirectory()) {
+      if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
+      execSync(`xcopy "${src}" "${dst}\\" /E /I /Y /Q`, { stdio: 'inherit' });
+    } else {
+      fs.copyFileSync(src, dst);
+    }
+  }
+}
+
+function gitKuruluMu() {
+  try {
+    execSync('git --version', { stdio: 'pipe', encoding: 'utf8' });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function zipAc(zipYol, hedefKlasor) {
+  fs.mkdirSync(hedefKlasor, { recursive: true });
+  const ps = [
+    `$zip = '${zipYol.replace(/'/g, "''")}'`,
+    `$dst = '${hedefKlasor.replace(/'/g, "''")}'`,
+    'Expand-Archive -Path $zip -DestinationPath $dst -Force'
+  ].join('; ');
+  execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'inherit' });
+}
+
+async function githubZipGuncelle(kok, koruFn) {
+  const repoUrl = repoUrlAl(kok);
+  const p = githubParcala(repoUrl);
+  if (!p) throw new Error('GIT_REPO_URL gecersiz');
+  const branch = dalAl();
+  const url = `https://codeload.github.com/${p.sahip}/${p.repo}/zip/refs/heads/${branch}`;
+
+  console.log('Git kurulu degil — GitHub ZIP indiriliyor...');
+  if (typeof koruFn === 'function') koruFn('yedek');
+
+  const tmpKok = path.join(kok, '_git_klon');
+  const tmpZip = path.join(tmpKok, 'repo.zip');
+  const tmpAc = path.join(tmpKok, 'acilan');
+  if (fs.existsSync(tmpKok)) fs.rmSync(tmpKok, { recursive: true, force: true });
+  fs.mkdirSync(tmpKok, { recursive: true });
+
+  try {
+    const headers = {};
+    const token = String(process.env.GIT_TOKEN || '').trim();
+    if (token) headers.Authorization = `token ${token}`;
+    console.log('Indiriliyor:', url);
+    const res = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 180000,
+      validateStatus: (s) => s === 200,
+      headers
+    });
+    fs.writeFileSync(tmpZip, Buffer.from(res.data));
+    console.log('ZIP aciliyor...');
+    zipAc(tmpZip, tmpAc);
+    const ust = fs.readdirSync(tmpAc).filter((ad) => !ad.startsWith('.'));
+    let kaynak = tmpAc;
+    if (ust.length === 1) {
+      const pth = path.join(tmpAc, ust[0]);
+      if (fs.statSync(pth).isDirectory()) kaynak = pth;
+    }
+    console.log('Dosyalar uygulaniyor...');
+    gitDosyalariKopyala(kaynak, kok);
+    if (typeof koruFn === 'function') koruFn('geri');
+    return { guncellendi: true, yontem: 'github-zip' };
+  } finally {
+    if (fs.existsSync(tmpKok)) fs.rmSync(tmpKok, { recursive: true, force: true });
+  }
+}
+
 function gitPullUygula(kok, koruFn) {
+  if (!gitKuruluMu()) {
+    throw new Error('Git kurulu degil — githubZipGuncelle kullanin');
+  }
   const repoUrl = repoUrlAl(kok);
   if (!repoUrl) throw new Error('GIT_REPO_URL tanimli degil (.env)');
 
   const branch = dalAl();
 
   if (!gitVarMi(kok)) {
+    console.log('GitHub indiriliyor (ilk kurulum)...');
     if (typeof koruFn === 'function') koruFn('yedek');
     const tmp = path.join(kok, '_git_klon');
     if (fs.existsSync(tmp)) fs.rmSync(tmp, { recursive: true, force: true });
-    execSync(`git clone --depth 1 -b ${branch} "${repoUrl}" "${tmp}"`, {
-      cwd: kok,
-      stdio: 'inherit'
-    });
-    for (const ad of fs.readdirSync(tmp)) {
-      if (ad === '.git') continue;
-      const src = path.join(tmp, ad);
-      const dst = path.join(kok, ad);
-      if (fs.statSync(src).isDirectory()) {
-        if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
-        execSync(`xcopy "${src}" "${dst}\\" /E /I /Y /Q`, { stdio: 'inherit' });
-      } else {
-        fs.copyFileSync(src, dst);
-      }
-    }
+    console.log('git clone...');
+    gitExec(`git clone --depth 1 -b ${branch} "${repoUrl}" "${tmp}"`, kok);
+    console.log('Dosyalar uygulaniyor...');
+    gitDosyalariKopyala(tmp, kok);
     fs.rmSync(tmp, { recursive: true, force: true });
-    execSync('git init', { cwd: kok, stdio: 'pipe' });
-    try { execSync(`git remote add origin "${repoUrl}"`, { cwd: kok, stdio: 'pipe' }); } catch (_) {}
-    execSync(`git fetch origin ${branch}`, { cwd: kok, stdio: 'inherit' });
-    execSync(`git checkout -B ${branch} FETCH_HEAD`, { cwd: kok, stdio: 'pipe' });
-    execSync(`git branch --set-upstream-to=origin/${branch} ${branch}`, { cwd: kok, stdio: 'pipe' });
+    gitExec('git init', kok, 'pipe');
+    try { gitExec(`git remote add origin "${repoUrl}"`, kok, 'pipe'); } catch (_) {}
+    gitExec(`git fetch origin ${branch}`, kok);
+    gitExec(`git checkout -B ${branch} FETCH_HEAD`, kok, 'pipe');
+    gitExec(`git branch --set-upstream-to=origin/${branch} ${branch}`, kok, 'pipe');
     if (typeof koruFn === 'function') koruFn('geri');
     return { guncellendi: true, yontem: 'clone' };
   }
 
   if (typeof koruFn === 'function') koruFn('yedek');
   try {
-    gitCalistir(`git fetch origin ${branch}`, kok, false);
+    console.log('git fetch...');
+    gitCalistir(`git fetch origin ${branch}`, kok, true);
     const local = gitCalistir('git rev-parse HEAD', kok);
     const remote = gitCalistir(`git rev-parse origin/${branch}`, kok);
     if (local === remote) {
       if (typeof koruFn === 'function') koruFn('geri');
       return { guncellendi: false };
     }
-    gitCalistir(`git pull origin ${branch} --ff-only`, kok, false);
+    console.log('git pull...');
+    gitCalistir(`git pull origin ${branch} --ff-only`, kok, true);
     if (typeof koruFn === 'function') koruFn('geri');
     return { guncellendi: true, yontem: 'pull' };
   } catch (err) {
@@ -230,9 +318,11 @@ function gitPullUygula(kok, koruFn) {
 
 module.exports = {
   gitVarMi,
+  gitKuruluMu,
   gitGuncellemeAktifMi,
   gitUzakSurumKontrol,
   gitPullUygula,
+  githubZipGuncelle,
   gitYayinla,
   envGitAyarla,
   surumJsonYaz,

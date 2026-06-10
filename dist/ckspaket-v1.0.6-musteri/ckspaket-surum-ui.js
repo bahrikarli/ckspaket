@@ -53,77 +53,22 @@
     alt.after(span);
   }
 
-  async function sunucuYenidenBekle(hedefSurum) {
-    const detay = document.getElementById('paket-guncelleme-detay');
-    const baslangic = Date.now();
-    const maxMs = 10 * 60 * 1000;
-    let sunucuKapandi = false;
-
-    while (Date.now() - baslangic < maxMs) {
-      await new Promise((r) => setTimeout(r, 3000));
-      try {
-        const res = await fetch('/api/paket-surum', { cache: 'no-store' });
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data.success) continue;
-        if (hedefSurum && data.surum === hedefSurum) {
-          location.reload();
-          return;
-        }
-        if (sunucuKapandi) {
-          location.reload();
-          return;
-        }
-      } catch (_) {
-        sunucuKapandi = true;
-        if (detay) {
-          detay.textContent = 'Sunucu güncelleniyor… Konsol penceresindeki ilerlemeyi izleyin. Birkaç dakika sürebilir.';
-        }
-      }
-    }
-    if (detay) {
-      detay.textContent = 'Güncelleme sürüyor olabilir. Birkaç dakika sonra sayfayı yenileyin veya ckspaket-musteri-guncelle.bat çalıştırın.';
-    }
-  }
-
   async function guncellemeBaslat() {
     if (kullaniciAdmin) {
-      if (!confirm('Güncelleme başlatılsın mı?\n\nSunucu kapanacak, dosyalar güncellenecek ve otomatik yeniden açılacak.\n\nckspaket-musteri-guncelle.bat ile aynı işlem yapılır.')) return;
-
-      const btn = document.getElementById('paket-guncelleme-aksiyon');
-      const detay = document.getElementById('paket-guncelleme-detay');
-      const hedefSurum = document.getElementById(bannerId)?.dataset?.surum || '';
-      btn.disabled = true;
-      btn.textContent = 'Başlatılıyor…';
-
+      if (!confirm('Güncelleme başlatılsın mı?\n\nSunucu kapanacak, dosyalar güncellenecek ve otomatik yeniden açılacak.')) return;
       try {
         const token = localStorage.getItem('token');
         const res = await fetch('/api/paket-guncelle-uygula', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token }
         });
-        let data;
-        try {
-          data = await res.json();
-        } catch (_) {
-          data = { success: false, message: 'Sunucu yanıt vermedi (HTTP ' + res.status + ')' };
+        const data = await res.json();
+        alert(data.message || (data.success ? 'Güncelleme başlatıldı.' : 'Güncelleme başlatılamadı.'));
+        if (data.success) {
+          setTimeout(() => { location.reload(); }, 8000);
         }
-        if (!res.ok || !data.success) {
-          alert(data.message || 'Güncelleme başlatılamadı.');
-          btn.disabled = false;
-          btn.textContent = 'Şimdi Güncelle';
-          return;
-        }
-
-        btn.textContent = 'Güncelleniyor…';
-        if (detay) {
-          detay.textContent = 'Güncelleme penceresi açılıyor… Sunucu kapanınca otomatik yenilenecek.';
-        }
-        sunucuYenidenBekle(hedefSurum);
       } catch (_) {
-        alert('Bağlantı hatası. Sunucu bilgisayarında ckspaket-musteri-guncelle.bat dosyasını çalıştırın.');
-        btn.disabled = false;
-        btn.textContent = 'Şimdi Güncelle';
+        alert('Güncelleme başlatılamadı. ckspaket-musteri-guncelle.bat dosyasını çalıştırın.');
       }
       return;
     }
@@ -157,7 +102,7 @@
       const token = localStorage.getItem('token');
       const meRes = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } });
       const me = await meRes.json();
-      if (me.success) kullaniciAdmin = String(me.user.rol || '').toLowerCase().trim() === 'admin';
+      if (me.success) kullaniciAdmin = me.user.rol === 'admin';
     } catch (_) {}
 
     try {

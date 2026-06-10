@@ -41,7 +41,7 @@ const KORU = new Set([
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
   'baslat.bat', 'baslat-gizli.vbs', 'durdur.bat', 'baslat-launcher.vbs', 'kisayol-olustur.vbs', 'sunucu-gizli.bat', 'sunucu-test.bat', 'sql-baglanti-test.bat', 'icon',
   'ckspaket-paketle.js', 'ckspaket-paketle.bat', 'ckspaket-musteri-surum.bat',
-  'ckspaket-musteri-guncelle.js', 'ckspaket-musteri-guncelle.bat',
+  'ckspaket-musteri-guncelle.js', 'ckspaket-musteri-guncelle.bat', 'ckspaket-musteri-guncelle-gizli.vbs',
   'ckspaketdata-olustur.js', 'ckspaketdata-olustur.bat',
   'ckspaketdata-musteri-kur.js', 'ckspaketdata-musteri-kur.bat',
   'ckspaket-sema-yedek-al.js', 'ckspaket-sema-yedek-al.bat',

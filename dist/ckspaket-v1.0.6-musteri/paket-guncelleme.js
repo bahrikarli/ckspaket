@@ -138,48 +138,20 @@ function registerPaketGuncelleme(app, opts) {
     app.post('/api/paket-guncelle-uygula', authenticateToken, sadeceAdmin, (req, res) => {
       try {
         const bat = path.join(gercekKlasor, 'ckspaket-musteri-guncelle.bat');
-        const vbs = path.join(gercekKlasor, 'ckspaket-musteri-guncelle-gizli.vbs');
         if (!fs.existsSync(bat)) {
           return res.status(404).json({ success: false, message: 'ckspaket-musteri-guncelle.bat bulunamadı' });
         }
-
+        const child = spawn('cmd.exe', ['/c', bat], {
+          detached: true,
+          stdio: 'ignore',
+          cwd: gercekKlasor,
+          windowsHide: false
+        });
+        child.unref();
         res.json({
           success: true,
-          message: 'Güncelleme başlatıldı. Konsol penceresi açılacak; sunucu kapanıp güncelleme uygulanacak ve otomatik yeniden açılacak.'
+          message: 'Güncelleme başlatıldı. Sunucu kapanacak, güncelleme uygulanacak ve otomatik yeniden açılacak.'
         });
-
-        // Yanıt gittikten sonra başlat — sunucu kapanınca child process ölmesin diye VBS/start kullan
-        setTimeout(() => {
-          try {
-            const logsDir = path.join(gercekKlasor, 'logs');
-            if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
-            fs.appendFileSync(
-              path.join(logsDir, 'guncelleme-ui.log'),
-              `\n[${new Date().toISOString()}] Arayuzden guncelleme tetiklendi\n`
-            );
-          } catch (_) {}
-
-          if (fs.existsSync(vbs)) {
-            const child = spawn('wscript.exe', ['//Nologo', vbs], {
-              detached: true,
-              stdio: 'ignore',
-              cwd: gercekKlasor,
-              windowsHide: true
-            });
-            child.unref();
-            return;
-          }
-
-          const logFile = path.join(gercekKlasor, 'logs', 'guncelleme-ui.log');
-          const batQ = bat.replace(/"/g, '""');
-          const logQ = logFile.replace(/"/g, '""');
-          const child = spawn(
-            'cmd.exe',
-            ['/c', `start "CKSPaket Guncelleme" /MIN cmd /c "${batQ}" >> "${logQ}" 2>&1`],
-            { detached: true, stdio: 'ignore', cwd: gercekKlasor, windowsHide: true }
-          );
-          child.unref();
-        }, 800);
       } catch (err) {
         res.status(500).json({ success: false, message: err.message });
       }

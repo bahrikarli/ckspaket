@@ -674,11 +674,63 @@
     .form-group.tam-genislik { grid-column: span 1; }
 }
 
+.cks-hava-serit {
+    background: linear-gradient(135deg, #1565c0 0%, #1e88e5 45%, #64b5f6 100%);
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 18px rgba(21,101,192,0.22);
+}
+.cks-hava-sol { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.cks-hava-ikon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.cks-hava-baslik { font-size: 13px; font-weight: 700; opacity: 0.95; }
+.cks-hava-durum { font-size: 12px; opacity: 0.88; margin-top: 2px; }
+.cks-hava-sicak { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
+.cks-hava-sicak small { font-size: 14px; font-weight: 600; opacity: 0.85; }
+.cks-hava-gunler { display: flex; gap: 8px; flex-wrap: wrap; }
+.cks-hava-gun-chip { background: rgba(255,255,255,0.18); border-radius: 10px; padding: 6px 10px; text-align: center; font-size: 10px; min-width: 52px; }
+.cks-hava-gun-chip .g { font-weight: 700; opacity: 0.9; }
+.cks-hava-gun-chip .t { font-size: 13px; font-weight: 800; margin-top: 2px; }
+.cks-hava-uyari { background: rgba(255,235,59,0.25); border: 1px solid rgba(255,255,255,0.35); color: #fff8e1; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cks-hava-yukleniyor { font-size: 12px; opacity: 0.9; }
+.cks-hava-rehber-btn {
+    background: rgba(255,255,255,0.95);
+    color: #1565c0;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transition: 0.2s;
+    flex-shrink: 0;
+}
+.cks-hava-rehber-btn:hover { background: #fff; transform: translateY(-1px); }
+#cksTarimRehberModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100050; }
+#cksTarimRehberModal .icerik { background: #fff; margin: 3% auto; width: 92%; max-width: 780px; height: 85vh; border-radius: 15px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+#cksTarimRehberModal .modal-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #f5f7f5; border-bottom: 1px solid #e0e8e0; flex-shrink: 0; }
+#cksTarimRehberModal .modal-bar span { font-weight: 700; color: #1e5c2a; font-size: 14px; }
+#cksTarimRehberModal .kapat { border: none; background: #e8f5e9; color: #2e7d32; width: 36px; height: 36px; border-radius: 8px; font-size: 22px; cursor: pointer; line-height: 1; font-weight: 700; }
+#cksTarimRehberModal iframe { width: 100%; flex: 1; border: none; }
+
 </style>
 <link rel="icon" href="data:,">
 </head>
 <body>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="/kurum-ayar-client.js"></script>
+<script src="/konum-yonetim-client.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 
@@ -686,6 +738,30 @@
 
 
 <div class="container">
+    <div id="cksHavaSerit" class="cks-hava-serit">
+        <div class="cks-hava-sol">
+            <div class="cks-hava-ikon"><i class="fas fa-cloud-sun"></i></div>
+            <div>
+                <div class="cks-hava-baslik">Sarayönü (Konya) — Hava Durumu</div>
+                <div id="cksHavaDurum" class="cks-hava-durum cks-hava-yukleniyor">Yükleniyor…</div>
+            </div>
+        </div>
+        <div id="cksHavaSicak" class="cks-hava-sicak" style="display:none;"></div>
+        <div id="cksHavaUyari" class="cks-hava-uyari" style="display:none;"></div>
+        <div id="cksHavaGunler" class="cks-hava-gunler"></div>
+        <button type="button" class="cks-hava-rehber-btn" onclick="cksTarimRehberAc()"><i class="fas fa-leaf"></i> Tarım Rehberi</button>
+    </div>
+
+    <div id="cksTarimRehberModal" onclick="if(event.target===this)cksTarimRehberKapat()">
+        <div class="icerik">
+            <div class="modal-bar">
+                <span><i class="fas fa-leaf"></i> Tarım Rehberi</span>
+                <button type="button" class="kapat" onclick="cksTarimRehberKapat()" title="Kapat">&times;</button>
+            </div>
+            <iframe id="cksTarimRehberFrame" src="" title="Tarım Rehberi"></iframe>
+        </div>
+    </div>
+
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
         
         <div style="display: flex; align-items: center; gap: 15px;">
@@ -4748,13 +4824,81 @@ function kayitTuruDegisti() {
     }
 }
 
+function cksHavaIkon(kod) {
+    if ([0,1].includes(kod)) return 'fa-sun';
+    if ([2,3].includes(kod)) return 'fa-cloud';
+    if ([51,53,55,61,63,65,80,81,82].includes(kod)) return 'fa-cloud-rain';
+    if ([71,73,75].includes(kod)) return 'fa-snowflake';
+    if ([95,96,99].includes(kod)) return 'fa-cloud-bolt';
+    return 'fa-cloud-sun';
+}
+
+function cksTarimRehberAc() {
+    try {
+        if (window.parent && window.parent !== window && typeof window.parent.tarimRehberModalAc === 'function') {
+            window.parent.tarimRehberModalAc();
+            return;
+        }
+    } catch (_) {}
+    const modal = document.getElementById('cksTarimRehberModal');
+    const frame = document.getElementById('cksTarimRehberFrame');
+    if (!modal || !frame) return;
+    frame.src = 'tarim-rehber.html?modal=1';
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function cksTarimRehberKapat() {
+    const modal = document.getElementById('cksTarimRehberModal');
+    const frame = document.getElementById('cksTarimRehberFrame');
+    if (modal) modal.style.display = 'none';
+    if (frame) frame.src = '';
+    document.body.style.overflow = '';
+}
+
+async function cksHavaYukle() {
+    const durumEl = document.getElementById('cksHavaDurum');
+    const sicakEl = document.getElementById('cksHavaSicak');
+    const uyariEl = document.getElementById('cksHavaUyari');
+    const gunlerEl = document.getElementById('cksHavaGunler');
+    const ikonEl = document.querySelector('#cksHavaSerit .cks-hava-ikon i');
+    if (!durumEl) return;
+    try {
+        const res = await fetch('/api/tarim/hava', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+        const metin = await res.text();
+        let d;
+        try { d = JSON.parse(metin); } catch (_) {
+            durumEl.textContent = 'Hava verisi alınamadı — sunucuyu yeniden başlatın';
+            return;
+        }
+        if (!d.success) throw new Error(d.message || 'Hata');
+        if (d.bugun) {
+            durumEl.textContent = d.bugun.aciklama + ' · ' + d.bugun.tarihTr;
+            sicakEl.style.display = 'block';
+            sicakEl.innerHTML = d.bugun.max + '° <small>/ ' + d.bugun.min + '°</small>';
+            if (ikonEl) ikonEl.className = 'fas ' + cksHavaIkon(d.bugun.kod);
+        }
+        const kritik = (d.uyarilar || []).find(u => u.seviye === 'kritik') || (d.uyarilar || [])[0];
+        if (kritik) {
+            uyariEl.style.display = 'block';
+            uyariEl.title = kritik.mesaj;
+            uyariEl.innerHTML = '<i class="fas fa-triangle-exclamation"></i> ' + kritik.mesaj;
+        }
+        gunlerEl.innerHTML = (d.gunler || []).slice(0, 4).map(g => {
+            const gunAd = g.tarihTr.split('.').slice(0, 2).join('.');
+            return `<div class="cks-hava-gun-chip"><div class="g">${gunAd}</div><div class="t">${g.max}°</div></div>`;
+        }).join('');
+    } catch (e) {
+        durumEl.textContent = 'Hava yüklenemedi: ' + e.message;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Bugünün tarihini Türkçe ve şık formatta yazdırır (Örn: 21 Nisan 2026, Salı)
     const tarihSecenekleri = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const bugunText = new Date().toLocaleDateString('tr-TR', tarihSecenekleri);
-    
     const tarihAlani = document.getElementById('bugunTarihYazi');
-    if(tarihAlani) tarihAlani.textContent = bugunText;
+    if (tarihAlani) tarihAlani.textContent = bugunText;
+    cksHavaYukle();
 });
 
 
@@ -5312,6 +5456,16 @@ html: `
             <textarea id="swal-adres" class="swal2-textarea" style="width:100%; margin:0; height:52px; font-size:13px; padding:8px;">${d.adres || ''}</textarea>
         </div>
 
+        <div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,#f4faf4,#eef6ee);border:1px solid #b8d4c4;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+                <div style="font-weight:700;color:#004d00;font-size:14px;"><i class="fas fa-map-marked-alt"></i> Mahalle / Köy Tanımlamaları</div>
+                <div style="font-size:11px;color:#666;margin-top:5px;line-height:1.4;">İl, ilçe ve mahalle/köy listelerini görüntüleyin, ekleyin veya silin.</div>
+            </div>
+            <button type="button" id="swal-konum-ac-btn" style="padding:11px 20px;background:#006400;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(0,100,0,0.25);">
+                <i class="fas fa-map"></i> Tanımlamaları Aç
+            </button>
+        </div>
+
         <div id="swal-tarama-ozet" style="background:#e8f4ec;border:1px solid #b8d4c4;border-radius:8px;padding:12px;margin-bottom:14px;"></div>
 
         <div style="background:#f4f7f5;border:1px solid #d5e0d8;border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;">
@@ -5380,6 +5534,18 @@ preConfirm: () => {
                     const inp = document.getElementById(id);
                     if (inp) inp.addEventListener('input', tanimlarTaramaOzetCanli);
                 });
+                const konumBtn = document.getElementById('swal-konum-ac-btn');
+                if (konumBtn) {
+                    konumBtn.onclick = () => {
+                        const il = document.getElementById('swal-il')?.value || d.il_adi || '';
+                        const ilce = document.getElementById('swal-ilce')?.value || d.ilce_adi || '';
+                        if (typeof konumTanimlariModalAc === 'function') {
+                            konumTanimlariModalAc(il, ilce, { fromKurum: true });
+                        } else {
+                            Swal.fire('Hata', 'Mahalle tanımları modülü yüklenemedi. Sayfayı yenileyin (Ctrl+F5).', 'error');
+                        }
+                    };
+                }
             }
         }).then(async (result) => {
             if (result.isConfirmed) {

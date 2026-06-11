@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personel Paneli</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',Tahoma,sans-serif; background:transparent; padding:24px 32px; color:#333; }
+    h2 { color:#006400; font-size:22px; display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+    h3 { color:#006400; font-size:16px; margin-bottom:12px; }
+    .kart { background:#fff; border:1px solid #e9ecef; border-radius:10px; padding:20px; margin-bottom:24px; }
+    .ust { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+    .btn { border:none; border-radius:6px; padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .btn-yesil { background:#006400; color:#fff; }
+    .btn-yesil:hover { background:#004d00; }
+    .btn-gri { background:#6c757d; color:#fff; }
+    .btn-kirmizi { background:#dc3545; color:#fff; padding:7px 12px; font-size:12px; }
+    .btn-mavi { background:#0d6efd; color:#fff; padding:7px 12px; font-size:12px; }
+    .btn-turuncu { background:#e67e22; color:#fff; padding:7px 12px; font-size:12px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:#555; }
+    input, select { width:100%; padding:10px; border:1px solid #ced4da; border-radius:6px; font-size:14px; margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#f8f9fa; padding:12px; text-align:left; font-size:13px; border-bottom:2px solid #dee2e6; }
+    td { padding:12px; border-bottom:1px solid #eee; font-size:14px; vertical-align:middle; }
+    tr:hover { background:#f8fff8; }
+    .role-badge { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; }
+    .role-admin { background:#ffeeba; color:#856404; }
+    .role-user { background:#eef6ee; color:#006400; }
+    .islem { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+    .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; }
+    .modal-bg.acik { display:flex; }
+    .modal { background:#fff; border-radius:12px; padding:24px; width:92%; max-width:480px; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+    .modal h3 { margin-bottom:16px; }
+    .sifre-kutu { background:#fff8e1; border:2px dashed #f0ad4e; border-radius:8px; padding:16px; text-align:center; margin:12px 0; }
+    .sifre-kutu code { font-size:28px; letter-spacing:3px; color:#c0392b; font-weight:bold; }
+    .mesaj { padding:10px; border-radius:6px; margin-bottom:12px; font-size:13px; display:none; }
+    .mesaj.ok { display:block; background:#d4edda; color:#155724; }
+    .mesaj.err { display:block; background:#f8d7da; color:#721c24; }
+    @media (max-width:700px) { .grid2 { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="ust">
+  <h2><i class="fas fa-users-cog"></i> Personel Yönetim Paneli</h2>
+  <button class="btn btn-yesil" onclick="yeniKullaniciModal()"><i class="fas fa-user-plus"></i> Yeni Kullanıcı</button>
+</div>
+
+<div class="kart">
+  <h3><i class="fas fa-user-shield"></i> Bilgilerim (Admin)</h3>
+  <div id="profilMesaj" class="mesaj"></div>
+  <div class="grid2">
+    <div>
+      <label>Kullanıcı adı</label>
+      <input id="p_ka" disabled style="background:#f5f5f5;">
+    </div>
+    <div>
+      <label>E-posta</label>
+      <input id="p_email" type="email" placeholder="ornek@odasi.gov.tr">
+    </div>
+    <div>
+      <label>Ad</label>
+      <input id="p_ad" placeholder="Ad">
+    </div>
+    <div>
+      <label>Soyad</label>
+      <input id="p_soyad" placeholder="Soyad">
+    </div>
+    <div style="grid-column:1/-1;">
+      <label>Yeni şifre (boş = değişmez)</label>
+      <input id="p_sifre" type="password" placeholder="Kendi şifrenizi değiştirmek için">
+    </div>
+  </div>
+  <button class="btn btn-yesil" onclick="profilKaydet()"><i class="fas fa-save"></i> Bilgilerimi Kaydet</button>
+</div>
+
+<div class="kart">
+  <h3><i class="fas fa-list"></i> Kullanıcı Listesi</h3>
+  <table id="tablo">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Kullanıcı Adı</th>
+        <th>Ad Soyad</th>
+        <th>E-posta</th>
+        <th>Rol</th>
+        <th style="text-align:center;">İşlem</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Yeni kullanıcı -->
+<div id="modalYeni" class="modal-bg">
+  <div class="modal">
+    <h3><i class="fas fa-user-plus"></i> Yeni Kullanıcı</h3>
+    <div id="yeniMesaj" class="mesaj"></div>
+    <label>Kullanıcı adı *</label>
+    <input id="n_ka" placeholder="ornek: ahmet.yilmaz">
+    <div class="grid2">
+      <div><label>Ad</label><input id="n_ad"></div>
+      <div><label>Soyad</label><input id="n_soyad"></div>
+    </div>
+    <label>E-posta</label>
+    <input id="n_email" type="email">
+    <label>Rol</label>
+    <select id="n_rol"><option value="user">Personel (user)</option><option value="admin">Admin</option></select>
+    <p style="font-size:12px;color:#666;margin-bottom:12px;">Geçici şifre otomatik oluşturulur ve size gösterilir.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-gri" onclick="modalKapat('modalYeni')">İptal</button>
+      <button class="btn btn-yesil" onclick="yeniKullaniciKaydet()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- Geçici şifre göster -->
+<div id="modalSifre" class="modal-bg">
+  <div class="modal">
+    <h3><i class="fas fa-key"></i> Geçici Şifre</h3>
+    <p>Bu bilgileri personele iletin. İlk girişte şifresini değiştirmesini önerin.</p>
+    <p><strong>Kullanıcı:</strong> <span id="s_ka"></span></p>
+    <div class="sifre-kutu"><code id="s_sifre"></code></div>
+    <button class="btn btn-yesil" style="width:100%;" onclick="sifreKopyala()"><i class="fas fa-copy"></i> Kopyala ve Kapat</button>
+  </div>
+</div>
+
+<!-- Düzenle -->
+<div id="modalDuzenle" class="modal-bg">
+  <div class="modal">
+    <h3><i class="fas fa-user-edit"></i> Kullanıcı Düzenle</h3>
+    <input type="hidden" id="d_id">
+    <label>Kullanıcı adı</label>
+    <input id="d_ka" disabled style="background:#f5f5f5;">
+    <div class="grid2">
+      <div><label>Ad</label><input id="d_ad"></div>
+      <div><label>Soyad</label><input id="d_soyad"></div>
+    </div>
+    <label>E-posta</label>
+    <input id="d_email" type="email">
+    <label>Rol</label>
+    <select id="d_rol"><option value="user">Personel</option><option value="admin">Admin</option></select>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-gri" onclick="modalKapat('modalDuzenle')">İptal</button>
+      <button class="btn btn-yesil" onclick="kullaniciGuncelle()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+
+let benimId = null;
+let sonGeciciSifre = '';
+let kullanicilar = [];
+
+function hdr() { return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }; }
+
+function modalAc(id) { document.getElementById(id).classList.add('acik'); }
+function modalKapat(id) { document.getElementById(id).classList.remove('acik'); }
+
+function mesajGoster(elId, text, ok) {
+  const el = document.getElementById(elId);
+  el.textContent = text;
+  el.className = 'mesaj ' + (ok ? 'ok' : 'err');
+  setTimeout(() => { el.className = 'mesaj'; }, 4000);
+}
+
+fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) return location.href = '/';
+    const rol = String(d.user.rol || '').toLowerCase();
+    if (rol !== 'admin') {
+      alert('Bu panele sadece adminler erişebilir!');
+      return location.href = 'anasayfa.html';
+    }
+    benimId = d.user.id;
+    document.getElementById('p_ka').value = d.user.kullaniciadi || '';
+    document.getElementById('p_ad').value = d.user.ad || '';
+    document.getElementById('p_soyad').value = d.user.soyad || '';
+    document.getElementById('p_email').value = d.user.email || '';
+    yukle();
+  });
+
+async function profilKaydet() {
+  const body = {
+    ad: document.getElementById('p_ad').value.trim(),
+    soyad: document.getElementById('p_soyad').value.trim(),
+    email: document.getElementById('p_email').value.trim()
+  };
+  const sifre = document.getElementById('p_sifre').value;
+  if (sifre) body.sifre = sifre;
+  const res = await fetch('/api/profil', { method: 'PUT', headers: hdr(), body: JSON.stringify(body) });
+  const d = await res.json();
+  mesajGoster('profilMesaj', d.message || (d.success ? 'Kaydedildi' : 'Hata'), d.success);
+  if (d.success) document.getElementById('p_sifre').value = '';
+}
+
+async function yukle() {
+  const res = await fetch('/api/kullanicilar', { headers: { Authorization: 'Bearer ' + token } });
+  if (!res.ok) return alert('Kullanıcı listesi alınamadı.');
+  const liste = await res.json();
+  kullanicilar = liste;
+  const tbody = document.querySelector('#tablo tbody');
+  tbody.innerHTML = '';
+  liste.forEach(u => {
+    const rol = String(u.rol || 'user').toLowerCase();
+    const ben = u.id === benimId;
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>#${u.id}</strong></td>
+        <td>${u.kullaniciadi}${ben ? ' <small>(siz)</small>' : ''}</td>
+        <td>${u.adsoyad || '-'}</td>
+        <td>${u.email || '-'}</td>
+        <td><span class="role-badge role-${rol}">${rol.toUpperCase()}</span></td>
+        <td class="islem">
+          <button class="btn btn-mavi" onclick="duzenle(${u.id})"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-turuncu" onclick="sifreSifirla(${u.id}, '${u.kullaniciadi}')"><i class="fas fa-key"></i></button>
+          ${ben ? '' : `<button class="btn btn-kirmizi" onclick="sil(${u.id})"><i class="fas fa-trash"></i></button>`}
+        </td>
+      </tr>`;
+  });
+}
+
+function yeniKullaniciModal() {
+  ['n_ka','n_ad','n_soyad','n_email'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('n_rol').value = 'user';
+  document.getElementById('yeniMesaj').className = 'mesaj';
+  modalAc('modalYeni');
+}
+
+async function yeniKullaniciKaydet() {
+  const ka = document.getElementById('n_ka').value.trim();
+  if (!ka) return mesajGoster('yeniMesaj', 'Kullanıcı adı zorunlu.', false);
+  const body = {
+    ka,
+    ad: document.getElementById('n_ad').value.trim(),
+    soyad: document.getElementById('n_soyad').value.trim(),
+    email: document.getElementById('n_email').value.trim(),
+    rol: document.getElementById('n_rol').value
+  };
+  const res = await fetch('/api/yenikullanici', { method: 'POST', headers: hdr(), body: JSON.stringify(body) });
+  const d = await res.json();
+  if (!d.success) return mesajGoster('yeniMesaj', d.message || 'Eklenemedi.', false);
+  modalKapat('modalYeni');
+  if (d.geciciSifre) geciciSifreGoster(d.kullaniciadi || ka, d.geciciSifre);
+  else alert(d.message);
+  yukle();
+}
+
+function geciciSifreGoster(ka, sifre) {
+  sonGeciciSifre = sifre;
+  document.getElementById('s_ka').textContent = ka;
+  document.getElementById('s_sifre').textContent = sifre;
+  modalAc('modalSifre');
+}
+
+function sifreKopyala() {
+  const text = `CKS Paket Giriş\nKullanıcı: ${document.getElementById('s_ka').textContent}\nGeçici şifre: ${sonGeciciSifre}`;
+  navigator.clipboard.writeText(text).catch(() => {});
+  modalKapat('modalSifre');
+}
+
+function duzenle(id) {
+  const u = kullanicilar.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('d_id').value = u.id;
+  document.getElementById('d_ka').value = u.kullaniciadi;
+  document.getElementById('d_ad').value = u.ad || '';
+  document.getElementById('d_soyad').value = u.soyad || '';
+  document.getElementById('d_email').value = u.email && u.email !== '-' ? u.email : '';
+  document.getElementById('d_rol').value = String(u.rol || 'user').toLowerCase();
+  modalAc('modalDuzenle');
+}
+
+async function kullaniciGuncelle() {
+  const id = document.getElementById('d_id').value;
+  const body = {
+    ad: document.getElementById('d_ad').value.trim(),
+    soyad: document.getElementById('d_soyad').value.trim(),
+    email: document.getElementById('d_email').value.trim(),
+    rol: document.getElementById('d_rol').value
+  };
+  const res = await fetch('/api/kullanici/' + id, { method: 'PUT', headers: hdr(), body: JSON.stringify(body) });
+  const d = await res.json();
+  if (d.success) { modalKapat('modalDuzenle'); yukle(); }
+  else alert(d.message || 'Güncellenemedi.');
+}
+
+async function sifreSifirla(id, ka) {
+  if (!confirm(`${ka} için yeni geçici şifre oluşturulsun mu?`)) return;
+  const res = await fetch('/api/kullanici/' + id + '/sifre-sifirla', { method: 'POST', headers: hdr() });
+  const d = await res.json();
+  if (d.success && d.geciciSifre) geciciSifreGoster(d.kullaniciadi || ka, d.geciciSifre);
+  else alert(d.message || 'Şifre sıfırlanamadı.');
+}
+
+async function sil(id) {
+  if (!confirm('Bu kullanıcı silinsin mi?')) return;
+  const res = await fetch('/api/sil/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+  const d = await res.json();
+  if (d.success) yukle();
+  else alert(d.message || 'Silinemedi.');
+}
+</script>
+</body>
+</html>

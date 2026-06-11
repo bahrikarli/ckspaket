@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÇKS Formları</title>
+<style>
+    body { font-family:'Segoe UI', Tahoma, Geneva, sans-serif; background: #eef4f7; margin:0; padding:20px; display:flex; justify-content:center; align-items:center; min-height:100vh; box-sizing: border-box; }
+    .card-container { max-width: 1000px; width: 95%; }
+    .card { background:white; padding:40px; border-radius:18px; box-shadow:0 15px 45px rgba(0,0,0,0.1); text-align:center; margin:0 auto; overflow: hidden; }
+    .ciftci-adi { padding:20px; font-size: 32px; font-weight: 700; color: #004d00; background: #e8f5e8; margin: -40px -40px 30px; border-radius:18px 18px 0 0; border-bottom: 3px solid #7cb342; }
+    .info-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; padding: 10px 0 30px; font-size: 16px; color: #555; }
+    .info-item { margin: 0 10px; white-space: nowrap; }
+    .info-item strong { color: #006400; font-weight: 600; margin-right: 5px; }
+    .form-grid { display:grid; grid-template-columns:repeat(3,1fr); gap: 20px; margin: 40px auto 20px; max-width: 900px; }
+    .btn { display:flex; align-items:center; justify-content:center; height: 60px; padding: 0 10px; background:#4caf50; color:white; text-decoration:none; border-radius:10px; font-size:16px; font-weight:bold; transition:all .3s; box-shadow:0 6px 15px rgba(0,0,0,0.1); border:none; cursor:pointer;}
+    .btn:hover { background:#388e3c; transform:translateY(-3px); }
+    #planliBtn {background:#2196f3;} #planliBtn:hover {background:#1976d2;}
+    #bilgiFormuBtn {background:#e91e63;} #bilgiFormuBtn:hover {background:#c2185b;}
+    #desteklemeBtn {background:#ff9800;} #desteklemeBtn:hover {background:#f57c00;}
+    .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); }
+    .modal-content { position:relative; background:white; margin:3vh auto; width:95%; max-width:1000px; height:94vh; border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.3); overflow:hidden; }
+    .close { position:absolute; right:15px; top:15px; color:#fff; font-size:30px; background:rgba(0,0,0,0.5); width:40px; height:40px; border-radius:50%; line-height:40px; text-align:center; cursor:pointer; z-index:10000; }
+    .close:hover { background:#d32f2f; }
+</style>
+</head>
+<body>
+<div class="card-container">
+    <div class="card">
+        <h2 class="ciftci-adi" id="ciftciAdi">YÜKLENİYOR...</h2>
+        <div class="info-grid">
+            <div class="info-item"><strong>Sicil No:</strong> <span id="sicilNo"></span></div>
+            <div class="info-item"><strong>TC:</strong> <span id="tc"></span></div>
+            <div class="info-item"><strong>Baba Adı:</strong> <span id="babaAdi"></span></div>
+            <div class="info-item"><strong>Doğum Tarihi:</strong> <span id="dogumTarih"></span></div>
+            <div class="info-item"><strong>Kayıt Tarihi:</strong> <span id="kayitTarih"></span></div>
+            <div class="info-item"><strong>İlçe/Köy:</strong> <span id="ilceKoy"></span></div>
+        </div>
+
+        <div class="form-grid">
+            <a href="#" id="planliBtn" class="btn">Planlı Üretim</a>
+            <a href="#" id="bilgiFormuBtn" class="btn">Arazi Pasifleme</a>
+            <a href="#" id="desteklemeBtn" class="btn">Destekleme+ Bilgi Paylaşım Dilekçesi</a>
+            
+            <a href="#" id="ekevrakBtn" class="btn">Ek Evrak</a>
+            <button id="btn2926" class="btn">2926 FORMU</button>
+            <a href="formlar/taahhutname.pdf" target="_blank" class="btn">Taahhütname</a>
+        </div>
+    </div>
+</div>
+
+<div id="planliModal" class="modal"><div class="modal-content"><span class="close">×</span><iframe id="planliIframe" style="width:100%;height:100%;border:none;"></iframe></div></div>
+<div id="pasiflemeModal" class="modal"><div class="modal-content"><span class="close">×</span><iframe id="pasiflemeIframe" style="width:100%;height:100%;border:none;"></iframe></div></div>
+<div id="ekevrakModal" class="modal"><div class="modal-content"><span class="close">×</span><iframe id="ekevrakIframe" style="width:100%;height:100%;border:none;"></iframe></div></div>
+
+<div id="modal2926" class="modal">
+    <div class="modal-content">
+        <span onclick="guvenliKapat()" style="cursor: pointer; float: right; font-weight: bold; font-size: 24px;">&times;</span>
+        <iframe id="iframe2926" style="width:100%;height:100%;border:none;border-radius:12px;"></iframe>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const kimlik = urlParams.get('kimlik');
+    if (!kimlik) return;
+
+    // Çiftçi Bilgilerini Doldur
+    document.getElementById('ciftciAdi').textContent = decodeURIComponent(urlParams.get('adsoyad') || '').toUpperCase();
+    document.getElementById('tc').textContent = urlParams.get('tc') || '-';
+    document.getElementById('kayitTarih').textContent = urlParams.get('kayittarihi') || '-';
+    document.getElementById('babaAdi').textContent = decodeURIComponent(urlParams.get('babaadi') || '-');
+    document.getElementById('dogumTarih').textContent = decodeURIComponent(urlParams.get('dogumtarihi') || '-');
+    document.getElementById('ilceKoy').textContent = decodeURIComponent(urlParams.get('ilcekoy') || '-');
+    document.getElementById('sicilNo').textContent = urlParams.get('sicil') || '-';
+
+    const tc = urlParams.get('tc') || '';
+    const adsoyad = decodeURIComponent(urlParams.get('adsoyad') || '');
+    const ilcekoy = decodeURIComponent(urlParams.get('ilcekoy') || '');
+    const tel = urlParams.get('tel') || '';
+
+    // Diğer Butonlar
+    document.getElementById('ekevrakBtn').onclick = (e) => { e.preventDefault(); document.getElementById('ekevrakIframe').src = `ekevrak.html?kimlik=${kimlik}`; document.getElementById('ekevrakModal').style.display = 'block'; }
+    document.getElementById('planliBtn').onclick = (e) => { e.preventDefault(); document.getElementById('planliIframe').src = `planli.html?kimlik=${kimlik}`; document.getElementById('planliModal').style.display = 'block'; }
+    document.getElementById('bilgiFormuBtn').onclick = (e) => { e.preventDefault(); document.getElementById('pasiflemeIframe').src = `pasifleme.html?tc=${tc}`; document.getElementById('pasiflemeModal').style.display = 'block'; }
+    
+    // 2926 BUTONU TIKLANINCA
+    document.getElementById('btn2926').onclick = (e) => {
+        e.preventDefault();
+        // İbform'u iframe içinde açıyoruz
+        document.getElementById('iframe2926').src = `ibform.html?kimlik=${kimlik}`;
+        document.getElementById('modal2926').style.display = 'block';
+    }
+
+        // Destekleme (yeni sekmede açılıyor)
+    document.getElementById('desteklemeBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = `destekleme.html?kimlik=${kimlik}&tc=${tc}&adsoyad=${encodeURIComponent(adsoyad)}&ilcekoy=${encodeURIComponent(ilcekoy)}&tel=${tel}`;
+        window.open(url, '_blank');
+    });
+
+    // EK EVRAK MODAL
+document.getElementById('ekevrakBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    const url = `ekevrak.html?kimlik=${kimlik}&tc=${tc}&adsoyad=${encodeURIComponent(adsoyad)}&ilcekoy=${encodeURIComponent(ilcekoy)}&tel=${tel}`;
+    document.getElementById('ekevrakIframe').src = url;
+    document.getElementById('ekevrakModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+});
+
+    // PLANLI ÜRETİM MODAL
+    document.getElementById('planliBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = `planli.html?kimlik=${kimlik}&tc=${tc}&adsoyad=${encodeURIComponent(adsoyad)}&ilcekoy=${encodeURIComponent(ilcekoy)}&tel=${tel}`;
+        document.getElementById('planliIframe').src = url;
+        document.getElementById('planliModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    });
+
+    // ARAZİ PASİFLEME MODAL
+    document.getElementById('bilgiFormuBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        const p = new URLSearchParams(window.location.search);
+        const url = `pasifleme.html?tc=${p.get('tc')||''}&adsoyad=${encodeURIComponent(p.get('adsoyad')||'')}&mahalle=${encodeURIComponent(p.get('mahalle')||'')}&ilcekoy=${encodeURIComponent(p.get('ilcekoy')||'')}`;
+        document.getElementById('pasiflemeIframe').src = url;
+        document.getElementById('pasiflemeModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    });
+
+
+    // Modal Kapatma Mantığı
+    document.querySelectorAll('.close').forEach(btn => {
+        btn.onclick = function() {
+            const modal = this.closest('.modal');
+            modal.style.display = 'none';
+            modal.querySelector('iframe').src = '';
+        }
+    });
+});
+
+function guvenliKapat() {
+    try {
+        const iframe = document.getElementById('iframe2926');
+        if (iframe && iframe.contentWindow) {
+            // İÇERİDEKİ FONKSİYONU ÇALIŞTIR
+            // Not: İçe erişirken pencere nesnesini kullanıyoruz
+            if (typeof iframe.contentWindow.otomatikKaydet === "function") {
+                iframe.contentWindow.otomatikKaydet();
+                console.log("İçerideki kayıt fonksiyonu tetiklendi.");
+            }
+        }
+    } catch (e) {
+        // Eğer bir güvenlik engeli olursa en azından konsola yazar
+        console.error("Kayıt tetiklenirken hata oluştu:", e);
+    }
+
+    // Her durumda modalı kapat
+    document.getElementById('modal2926').style.display = 'none';
+}
+
+</script>
+</body>
+</html>

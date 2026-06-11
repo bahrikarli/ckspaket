@@ -1,11 +1,41 @@
-node_modules
+# === Kişisel / operasyonel veri — asla Git'e gitmez ===
 taramalar/
-RobotProfil/
+uploads/
 .env
+.env.*
+!.env.example
+!.env.ornek
+
+# WhatsApp oturumu / tarayıcı profili
 .wwebjs_auth/
 .wwebjs_cache/
-dist/
-guncellemeler/*.zip
-_git_klon/
-_guncelleme_yedek/
-logs/
+RobotProfil/
+
+# Yedek, veritabanı dökümü, çalışma kuyruğu
+*.bak
+*.yedek
+*.mdf
+*.ldf
+sira-kuyruk.json
+sira-kuyruk.json.yedek
+
+# Büyük ikili / arşiv / kurulum dosyaları
+*.exe
+*.rar
+*.zip
+server.exe
+demo/*.exe
+demo/son-calistirma.log
+
+# Sıramatik arşiv klasörü (kaynak: ANA-PC-C-siramatik altında)
+siramatik-paket/ANA-PC-C-cks/
+siramatik-paket/YAN-PC.rar
+
+# VPN ayarları
+vpn/
+
+# Node
+node_modules/
+
+# Log
+*.log

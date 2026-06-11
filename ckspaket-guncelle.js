@@ -33,25 +33,14 @@ const KOPYALA = [
   'ibform.html',
   'destekleme.html',
   'cks_istatistik.html',
-  'bilgi.html'
+  'bilgi.html',
+  'tarim-rehber.js',
+  'tarim-rehber.html'
 ];
 
 const KORU = new Set([
-  'anasayfa.html', 'index.html', 'kurum-baslik.js', 'kurum-ayar.js', 'kurum-sunucu.js', 'arsiv.html', 'dashboard.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'anasayfa.html', 'arsiv.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
-  'baslat.bat', 'baslat-gizli.vbs', 'durdur.bat', 'baslat-launcher.vbs', 'kisayol-olustur.vbs', 'sunucu-baslat.vbs', 'sunucu-gizli.bat', 'sunucu-test.bat', 'port-temizle.bat', 'sql-baglanti-test.bat', 'icon',
-  'ckspaket-paketle.js', 'ckspaket-paketle.bat', 'ckspaket-musteri-surum.bat',
-  'ckspaket-musteri-guncelle.js', 'ckspaket-musteri-guncelle.bat', 'ckspaket-musteri-guncelle-gizli.vbs',
-  'ckspaketdata-olustur.js', 'ckspaketdata-olustur.bat',
-  'ckspaketdata-musteri-kur.js', 'ckspaketdata-musteri-kur.bat',
-  'ckspaket-sema-yedek-al.js', 'ckspaket-sema-yedek-al.bat',
-  'ckspaket-excel-ciftci-aktar.js', 'ckspaket-excel-ciftci-aktar.bat',
-  'ckspaket-excel-dilekce-aktar.js', 'ckspaket-excel-dilekce-aktar.bat',
-  'ckspaket-excel-telefon-guncelle.js', 'ckspaket-excel-telefon-guncelle.bat',
-  'ckspaket-belgenet-pdf-eslestir.js', 'ckspaket-belgenet-pdf-eslestir.bat',
-  'ckspaket-ag-ayar.bat', 'ckspaket-ac.bat', 'ckspaket-ac.vbs', 'ag-kisayol-olustur.vbs', 'ckspaket-ag-kisayol-olustur.bat', 'CKS Paket.url',
-  'MUSTERI-SQL-KURULUM.txt', 'sema',
-  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'guncelleme-koru.js', 'guncelleme-zip.js', 'paket-admin.js',
   'sistem-ayar.js', 'config.js'
 ]);
 
@@ -70,6 +59,22 @@ function bosTaramalarYapisi() {
     if (!fs.existsSync(keep)) fs.writeFileSync(keep, '');
   }
   console.log('  OK: taramalar/ (bos sablon)');
+}
+
+function dataKlasoruKopyala() {
+  const srcData = path.join(KAYNAK, 'data');
+  const dstData = path.join(HEDEF, 'data');
+  if (!fs.existsSync(srcData)) {
+    console.log('  ATLA: data/ (kaynak yok)');
+    return;
+  }
+  fs.mkdirSync(dstData, { recursive: true });
+  for (const f of fs.readdirSync(srcData)) {
+    const src = path.join(srcData, f);
+    if (!fs.statSync(src).isFile()) continue;
+    fs.copyFileSync(src, path.join(dstData, f));
+    console.log('  OK: data/' + f);
+  }
 }
 
 function serverJsPaketYamasi() {
@@ -211,7 +216,7 @@ app.use('/taramalar', (req, res, next) => {
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASS || '189189',
   server: process.env.DB_SERVER || 'YENISERVER',
-  database: process.env.DB_NAME || 'ckspaketdata',
+  database: process.env.DB_NAME || 'demoanaa',
   options: {
         encrypt: false,
         trustServerCertificate: true,
@@ -310,90 +315,6 @@ function ibformPaketYamasi() {
   console.log('  OK: ibform.html paket yamalari');
 }
 
-function paketAdminYamasi() {
-  const p = path.join(HEDEF, 'server.js');
-  if (!fs.existsSync(p)) return;
-  let s = oku(p);
-  if (!s.includes('registerPaketAdmin')) {
-    s = s.replace(
-      /app\.get\('\/api\/kullanicilar', authenticateToken, sadeceAdmin, async \(req, res\) => \{[\s\S]*?\n\}\);\n\n\/\/ ÇKS LİSTE/,
-      `app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(\`
-      SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad, '') AS ad, ISNULL(Soyad, '') AS soyad,
-             ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
-             ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol
-      FROM Kullanicilar ORDER BY rol DESC, Ad
-    \`);
-    res.json(result.recordset);
-  } catch (err) { res.json([]); }
-});
-
-if (CKSPAKET_MOD) {
-  const { registerPaketAdmin } = require('./paket-admin');
-  registerPaketAdmin(app, { CKSPAKET_MOD, authenticateToken, sadeceAdmin, sql, getPool });
-}
-
-// ÇKS LİSTE`
-    );
-    yaz(p, s);
-    console.log('  OK: server.js paket admin API');
-  }
-}
-
-function kurumSunucuYamasi() {
-  const p = path.join(HEDEF, 'server.js');
-  if (!fs.existsSync(p)) return;
-  let s = oku(p);
-
-  if (!s.includes('ozelSayfaStatic')) {
-    s = s.replace(
-      /app\.use\(express\.static\(__dirname\)\);/,
-      `const ozelSayfaStatic = new Set(['/', '/index.html', '/anasayfa.html']);
-app.use((req, res, next) => {
-  if (ozelSayfaStatic.has(req.path)) return next();
-  express.static(__dirname, { index: false })(req, res, next);
-});`
-    );
-  }
-
-  if (!s.includes('registerKurumSunucu')) {
-    s = s.replace(
-      /\/\/ TÜM SAYFALAR\r?\napp\.get\('\/', \(req, res\) => res\.sendFile\(path\.join\(__dirname, 'index\.html'\)\)\);\r?\napp\.get\('\/anasayfa\.html', authenticateToken, \(req, res\) => res\.sendFile\(path\.join\(__dirname, 'anasayfa\.html'\)\)\);/,
-      `// TÜM SAYFALAR
-if (CKSPAKET_MOD) {
-  require('./kurum-sunucu').registerKurumSunucu(app, { getPool, gercekKlasor, authenticateToken });
-} else {
-  app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-  app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
-}`
-    );
-  }
-
-  yaz(p, s);
-  if (s.includes('registerKurumSunucu')) console.log('  OK: server.js kurum sunucu');
-}
-
-function paketGuncellemeYamasi() {
-  const p = path.join(HEDEF, 'server.js');
-  if (!fs.existsSync(p)) return;
-  let s = oku(p);
-  if (!s.includes('registerPaketGuncelleme')) {
-    s = s.replace(
-      /\/\/ ========== ÇKS SIRAMATİK \(SQL Server — CKS_Sira tablosu\) ==========/,
-      `if (CKSPAKET_MOD) {
-  const { registerPaketGuncelleme } = require('./paket-guncelleme');
-  registerPaketGuncelleme(app, { gercekKlasor, CKSPAKET_MOD, authenticateToken, sadeceAdmin });
-}
-
-// ========== ÇKS SIRAMATİK (SQL Server — CKS_Sira tablosu) ==========`
-    );
-    yaz(p, s);
-    console.log('  OK: server.js paket guncelleme API');
-  }
-}
-
 console.log('=== CKS → CKS Paket Senkron ===');
 console.log('Kaynak:', KAYNAK);
 console.log('Hedef :', HEDEF);
@@ -453,10 +374,8 @@ serverJsPaketYamasi();
 cksHtmlPaketYamasi();
 dilekcePaketYamasi();
 ibformPaketYamasi();
-paketAdminYamasi();
-kurumSunucuYamasi();
-paketGuncellemeYamasi();
 bosTaramalarYapisi();
+dataKlasoruKopyala();
 
 function portDogrulama() {
   const hatalar = [];
@@ -470,14 +389,14 @@ function portDogrulama() {
   if (fs.existsSync(envPath) && !/^PORT=3030\s*$/m.test(oku(envPath))) {
     hatalar.push('.env: PORT=3030 korunmali (senkron .env dosyasina dokunmaz)');
   }
-  if (fs.existsSync(envPath) && !/^DB_NAME=ckspaketdata\s*$/m.test(oku(envPath))) {
-    hatalar.push('.env: DB_NAME=ckspaketdata olmali (ckspaket veritabani)');
+  if (fs.existsSync(envPath) && !/^DB_NAME=(demoanaa|ckspaketdata)\s*$/m.test(oku(envPath))) {
+    hatalar.push('.env: DB_NAME=demoanaa veya ckspaketdata olmali (3030 paket veritabani)');
   }
   if (/\[anaa\]\.\[dbo\]\./.test(srv)) {
     hatalar.push('server.js: [anaa].[dbo] sabit referanslari kalmis');
   }
-  if (!/database: process\.env\.DB_NAME \|\| 'ckspaketdata'/.test(srv)) {
-    hatalar.push('server.js: dbConfig ckspaketdata (.env) kullanmali');
+  if (!/database: process\.env\.DB_NAME \|\| 'demoanaa'/.test(srv)) {
+    hatalar.push('server.js: dbConfig demoanaa (.env) kullanmali');
   }
   if (hatalar.length) {
     console.error('\nPORT DOGRULAMA HATASI (ckspaket 3030):');

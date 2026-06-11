@@ -22,9 +22,9 @@
     th,td {padding:18px 20px;text-align:left;border-bottom:1px solid #eee;}
     th {background:#e8f5e8;color:#006400;font-weight:bold;width:30%;}
     .dilekce-no {font-size:38px !important;font-weight:bold !important;color:#006400 !important;letter-spacing:1px;}
-    .cks-yapildi {color:#006400;font-weight:bold;font-size:19px;}
-    .cks-bekleniyor {color:#e67e22;font-weight:bold;}
-    .cks-yok {color:#c0392b;}
+    .cks-yapildi-legacy {color:#006400;font-weight:bold;font-size:19px;}
+    .cks-bekleniyor-legacy {color:#e67e22;font-weight:bold;}
+    .cks-yok-legacy {color:#c0392b;}
     .actions {text-align:center;padding:30px;background:#f9f9f9;}
     .btn {padding:14px 36px;margin:0 12px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;transition:all .3s;}
     .btn-duzenle {background:#006400;color:white;}
@@ -160,6 +160,91 @@
 .cks-yapildi { background: #e8f5e9; color: #2e7d32; }
 .cks-bekleniyor { background: #fff3e0; color: #ef6c00; }
 .cks-yok { background: #ffebee; color: #c62828; }
+
+/* Aktif dönem kartı */
+/* Tarama + Dilekçe yan yana yerleşim */
+.dilekce-ana-grid { display:grid; grid-template-columns:1.15fr 0.85fr; gap:14px; align-items:start; }
+.dilekce-ana-sol, .dilekce-ana-sag { min-width:0; display:flex; flex-direction:column; gap:8px; }
+.dilekce-ana-sag .tarama-scroll-kutu { max-height:300px; }
+.dilekce-ana-sag .tarama-dosya-adi { max-width:130px; }
+.dilekce-ana-sag { background:#fafcfa; border:1px solid #e4ebe4; border-radius:10px; padding:10px 12px 12px; }
+.dilekce-sekmeler { display:flex; gap:4px; border-bottom:2px solid #e0e0e0; margin-bottom:8px; }
+.dilekce-sekmeler button { padding:8px 14px; border:none; border-radius:8px 8px 0 0; cursor:pointer; font-weight:bold; font-size:12px; transition:0.2s; }
+.tarama-scroll-kutu { max-height:320px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:8px; background:#fff; }
+.gecmis-scroll-kutu { max-height:340px; overflow:auto; border:1px solid #e0e0e0; border-radius:8px; }
+.gecmis-scroll-kutu .gecmis-basvuru-table { font-size:11px !important; }
+.gecmis-scroll-kutu .gecmis-basvuru-table th, .gecmis-scroll-kutu .gecmis-basvuru-table td { padding:6px 4px !important; }
+.tarama-scroll-kutu table { font-size:12px !important; }
+.tarama-scroll-kutu th, .tarama-scroll-kutu td { padding:7px 8px !important; }
+.tarama-dosya-adi { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:bottom; }
+@media (max-width:1024px) {
+    .dilekce-ana-grid { grid-template-columns:1fr; }
+    .tarama-scroll-kutu { max-height:220px; }
+}
+
+.aktif-kayit-kart { background:#fff; border:1px solid #d4e8d4; border-radius:10px; overflow:hidden; box-shadow:0 2px 10px rgba(0,80,0,0.05); }
+.aktif-kayit-ust { background:#e8f5e8; padding:7px 12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #c8e6c9; flex-wrap:wrap; gap:6px; }
+.aktif-kayit-ust span { color:#006400; font-weight:bold; font-size:13px; }
+.aktif-durum-serit { display:flex; align-items:center; gap:0; margin:10px 12px; padding:10px 12px; background:linear-gradient(135deg,#f8faf8 0%,#f0f4f0 100%); border-radius:10px; border:1px solid #e0e8e0; }
+.aktif-dilekce-no-kutu { flex:0 0 auto; text-align:center; padding:4px 14px 4px 4px; border-right:2px solid #c8e6c9; margin-right:10px; min-width:62px; }
+.aktif-dilekce-no-kutu .no-etiket { display:block; font-size:8px; font-weight:700; color:#7f8c8d; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+.aktif-dilekce-no-kutu .no-deger { display:block; font-size:26px; font-weight:800; color:#c62828; line-height:1; letter-spacing:-0.5px; }
+.aktif-durum-adimlar { display:flex; align-items:flex-start; flex:1; gap:0; }
+.durum-adim { flex:1; text-align:center; min-width:0; }
+.durum-adim .adim-ikon { width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; margin-bottom:3px; }
+.durum-adim.tamam .adim-ikon { background:#27ae60; color:#fff; }
+.durum-adim.eksik .adim-ikon { background:#fff; border:2px solid #ddd; color:#bbb; }
+.durum-adim.bekliyor .adim-ikon { background:#fff8e1; border:2px solid #ef6c00; color:#ef6c00; }
+.durum-adim .adim-etiket { display:block; font-size:9px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:0.2px; }
+.durum-cizgi { flex:0 0 8px; height:2px; background:#ddd; margin-top:12px; }
+.durum-cizgi.tamam { background:#27ae60; }
+.aktif-ozet-wrap { padding:12px 14px 14px; border-top:1px solid #e8efe8; background:linear-gradient(180deg,#f8faf8 0%,#f2f6f2 100%); }
+.aktif-ozet-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.aktif-ozet-hucre { background:#fff; border:1px solid #e4ebe4; border-radius:8px; padding:10px 12px 9px; min-width:0; transition:border-color 0.15s,box-shadow 0.15s; }
+.aktif-ozet-hucre.duzenlenebilir { cursor:pointer; user-select:none; }
+.aktif-ozet-hucre.duzenlenebilir:hover { border-color:#7cb87c; box-shadow:0 2px 10px rgba(0,80,0,0.12); }
+.aktif-ozet-hucre:hover { border-color:#c8dcc8; box-shadow:0 2px 8px rgba(0,80,0,0.07); }
+.durum-adim.tiklanabilir { cursor:pointer; }
+.durum-adim.tiklanabilir:hover .adim-etiket { color:#006400; }
+.aktif-ozet-hucre label { display:flex; align-items:center; gap:5px; font-size:9px; font-weight:700; color:#5a7a5a; text-transform:uppercase; margin-bottom:5px; letter-spacing:0.4px; }
+.aktif-ozet-hucre label i { font-size:9px; opacity:0.7; color:#2e7d32; }
+.aktif-ozet-hucre .deger { font-size:13px; color:#1a2e1a; font-weight:600; line-height:1.35; min-width:0; }
+.ozet-deger-trgm { font-size:11px !important; font-weight:700 !important; color:#1565c0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:0.01em; }
+.ozet-deger-trgm.bos { color:#b0bec5; font-weight:600 !important; }
+.ozet-deger-personel { font-size:12px !important; color:#37474f !important; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.aktif-ozet-hucre.ozet-belgenet-bar { grid-column:span 2; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 14px; background:linear-gradient(135deg,#fff 0%,#f9fbf9 100%); border-color:#d0e0d0; }
+.aktif-ozet-hucre.ozet-belgenet-bar label { margin-bottom:0; flex-shrink:0; }
+.ozet-belgenet-icerik { flex:1; text-align:right; font-size:12px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ozet-belgenet-icerik.tamam { color:#2e7d32; }
+.ozet-belgenet-icerik.bekliyor { color:#ef6c00; }
+.ozet-belgenet-icerik.bos { color:#90a4ae; font-weight:600; }
+/* Kurumsal üst menü */
+.aktif-ust-menu { display:flex; background:linear-gradient(180deg,#2c5530 0%,#1e3d22 100%); border-bottom:2px solid #006400; }
+.aktif-menu-item { flex:1; padding:9px 8px; border:none; border-right:1px solid rgba(255,255,255,0.12); background:transparent; color:#e8f5e9; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:background 0.15s; letter-spacing:0.2px; white-space:nowrap; }
+.aktif-menu-item:last-child { border-right:none; }
+.aktif-menu-item:hover:not(:disabled) { background:rgba(255,255,255,0.12); color:#fff; }
+.aktif-menu-item:disabled { opacity:0.55; cursor:default; }
+.aktif-menu-item i { font-size:12px; opacity:0.9; }
+.aktif-menu-item.menu-tarbis:hover:not(:disabled) { background:#3f51b5; }
+.aktif-menu-item.menu-cks:hover:not(:disabled) { background:#2e7d32; }
+.aktif-menu-item.menu-arsiv:hover:not(:disabled) { background:#e65100; }
+.aktif-menu-item.menu-ozet { background:rgba(0,0,0,0.15); font-weight:700; }
+.aktif-menu-item.menu-ozet:hover { background:#34495e; }
+.aktif-menu-item.tamam { color:#a5d6a7; }
+.tarama-personel { max-width:88px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; font-size:10px; color:#444; vertical-align:bottom; font-weight:600; }
+.cks-durum-rozet { display:inline-block; padding:2px 8px; border-radius:12px; font-weight:bold; font-size:11px; }
+.cks-durum-rozet.cks-yapildi { background:#e8f5e9 !important; color:#2e7d32 !important; }
+.cks-durum-rozet.cks-bekleniyor { background:#fff3e0 !important; color:#ef6c00 !important; }
+.cks-durum-rozet.cks-yok { background:#ffebee !important; color:#c62828 !important; }
+
+/* Düzenleme modal sekmeleri */
+.duzenle-sekmeler { display:flex; gap:2px; margin-bottom:16px; border-bottom:2px solid #e8f5e9; }
+.duzenle-sekme-btn { padding:9px 16px; border:none; background:transparent; cursor:pointer; font-weight:bold; font-size:12px; color:#888; border-bottom:3px solid transparent; margin-bottom:-2px; transition:0.2s; }
+.duzenle-sekme-btn:hover { color:#006400; }
+.duzenle-sekme-btn.aktif { color:#006400; border-bottom-color:#006400; }
+.duzenle-tab-panel { display:none; }
+.duzenle-tab-panel.aktif { display:block; }
+.arsiv-bilgi-kutu { background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:16px; text-align:center; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
@@ -171,14 +256,14 @@
     /* Özel Şık ve Kompakt Tasarım */
     .kibar-card {
         background: #fff;
-        padding: 15px 25px; /* Gereksiz geniş boşluklar daraltıldı */
         display: flex;
         flex-direction: column;
-        gap: 15px; /* Bölümler arası düzenli boşluk */
+        gap: 10px;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        max-width: 960px;
-        margin: 20px auto;
+        max-width: 1280px;
+        margin: 12px auto;
+        padding: 12px 18px;
         position: relative;
         z-index: 10;
     }
@@ -188,12 +273,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
+        gap: 10px;
         color: #006400;
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 800;
         border-bottom: 2px solid #eef2f5;
-        padding-bottom: 12px;
+        padding-bottom: 8px;
         margin: 0;
     }
 
@@ -506,41 +591,38 @@
         <div class="kibar-info-item"><strong>Cep Telefonu</strong> <span id="cepTelefonu">-</span></div>
     </div>
 
-    <div class="kibar-section-header">
-        <div class="kibar-section-title">Dijital Arşiv (Taranmış PDF'ler)</div>
-        <button onclick="yeniTaramaKaydiOlustur()" class="btn-kibar btn-yesil">
-            <i class="fa fa-plus"></i> Yeni Tarama Ekle
-        </button>
-    </div>
-    
-    <div id="taramaAlani" style="min-height: 40px;">
+    <div class="dilekce-ana-grid">
+        <div class="dilekce-ana-sol">
+            <div class="kibar-section-header" style="margin-top:0;">
+                <div class="kibar-section-title"><i class="fa fa-file-invoice" style="color:#006400;margin-right:6px;"></i> Dilekçe ve ÇKS</div>
+            </div>
+            <div class="dilekce-sekmeler">
+                <button id="tabBtnAktif" onclick="sekmeDegistir('aktif')" style="background:#006400;color:#fff;">
+                    <i class="fa fa-calendar-check"></i> Aktif <span id="aktifYilGosterici"></span>
+                </button>
+                <button id="tabBtnArsiv" onclick="sekmeDegistir('arsiv')" style="background:#f1f1f1;color:#666;">
+                    <i class="fa fa-archive"></i> Geçmiş Arşiv
+                </button>
+            </div>
+            <div id="aktifIcerik" style="display:block;">
+                <div id="tabloAlani">Yükleniyor...</div>
+            </div>
+            <div id="arsivIcerik" style="display:none;">
+                <div id="arsivTaramaAlani" style="display:none;"></div>
+                <div id="gecmisBasvurularTablosu"></div>
+            </div>
         </div>
 
-    <div class="kibar-section-header">
-        <div class="kibar-section-title">Dilekçe ve ÇKS Kayıtları</div>
+        <div class="dilekce-ana-sag">
+            <div class="kibar-section-header">
+                <div class="kibar-section-title"><i class="fa fa-file-pdf" style="color:#c62828;margin-right:6px;"></i> Tarama</div>
+                <button onclick="yeniTaramaKaydiOlustur()" class="btn-kibar btn-yesil" style="padding:5px 10px;font-size:11px;">
+                    <i class="fa fa-plus"></i> Ekle
+                </button>
+            </div>
+            <div id="taramaAlani" style="min-height:40px;"></div>
+        </div>
     </div>
-
-    <!--yeni-->
-    <div style="display: flex; gap: 5px; margin: 0 30px 15px; border-bottom: 2px solid #e0e0e0;">
-        <button id="tabBtnAktif" onclick="sekmeDegistir('aktif')" style="padding: 12px 25px; border: none; border-radius: 10px 10px 0 0; cursor: pointer; font-weight: bold; background: #006400; color: white; transition: 0.3s;">
-    <i class="fa fa-file-invoice"></i> AKTİF DÖNEM <span id="aktifYilGosterici"></span>
-</button>
-    <button id="tabBtnArsiv" onclick="sekmeDegistir('arsiv')" style="padding: 12px 25px; border: none; border-radius: 10px 10px 0 0; cursor: pointer; font-weight: bold; background: #f1f1f1; color: #666; transition: 0.3s;">
-        <i class="fa fa-archive"></i> GEÇMİŞ DÖNEM ARŞİVİ
-    </button>
-</div>
-
-<div id="aktifIcerik" style="display: block;">
-    <div id="tabloAlani" style="padding: 0 30px;">Yükleniyor...</div>
-</div>
-
-<div id="arsivIcerik" style="display: none; padding: 0 30px;">
-    <div id="arsivTaramaAlani" style="margin-bottom: 20px;"></div>
-    
-    <div id="gecmisBasvurularTablosu">
-    </div>
-</div>
-<!--yeni son-->
 
     
 
@@ -897,77 +979,86 @@
                 <span id="duzenleTc" style="color:#c62828; font-size:13px; font-weight:600;"></span>
             </div>
 
-            <div class="kibar-form-grid">
-                <div class="kibar-form-row">
-                    <label>Dilekçe No</label>
-                    <input type="text" id="editDilekceNo" readonly>
-                </div>
-                <div class="kibar-form-row">
-                    <label>Başvuru Tarihi</label>
-                    <input type="text" id="editBasvuruTarih" readonly>
-                </div>
-                <div class="kibar-form-row">
-                    <label>Kabul Personeli</label>
-                    <input type="text" id="editKabulPersonel" readonly>
-                </div>
+            <div class="duzenle-sekmeler">
+                <button type="button" class="duzenle-sekme-btn aktif" data-sekme="genel" onclick="duzenleSekmeDegistir('genel')"><i class="fa fa-file-alt"></i> Genel</button>
+                <button type="button" class="duzenle-sekme-btn" data-sekme="cks" onclick="duzenleSekmeDegistir('cks')"><i class="fa fa-seedling"></i> ÇKS</button>
+                <button type="button" class="duzenle-sekme-btn" data-sekme="eksikler" onclick="duzenleSekmeDegistir('eksikler')"><i class="fa fa-exclamation-triangle"></i> Eksikler</button>
+                <button type="button" class="duzenle-sekme-btn" data-sekme="arsiv" onclick="duzenleSekmeDegistir('arsiv')"><i class="fa fa-archive"></i> Arşiv</button>
             </div>
 
-            <div class="kibar-divider"></div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="kibar-form-row">
-                    <label>TARBİS DİLEKÇE NO</label>
-                    <input type="text" id="edittkgm" placeholder="Tarbis No Girin">
-                </div>
-                <div class="kibar-form-row">
-                    <label>Notlar</label>
-                    <textarea id="editNotlar" rows="2" placeholder="Varsa not ekleyin..."></textarea>
-                </div>
-            </div>
-
-            <div class="kibar-divider"></div>
-
-            <div id="cksEkleSection" style="text-align:center; display:none; padding: 10px 0;">
-                <button class="kibar-btn kibar-btn-cks" id="modalIciCksEkleBtn">
-                    <i class="fa fa-plus-circle"></i> ÇKS Giriş Ekle
-                </button>
-            </div>
-
-            <div id="cksInputsSection" style="display:none;" class="cks-kutu">
+            <div id="duzenleTabGenel" class="duzenle-tab-panel aktif">
                 <div class="kibar-form-grid">
                     <div class="kibar-form-row">
-                        <label>ÇKS Durumu</label>
-                        <select id="editCksDurum">
-                            <option value="">- Seçiniz -</option>
-                            <option value="YAPILDI">YAPILDI</option>
-                            <option value="BEKLENİYOR">BEKLENİYOR</option>
-                            <option value="YOK">YOK</option>
-                        </select>
+                        <label>Dilekçe No</label>
+                        <input type="text" id="editDilekceNo" readonly>
                     </div>
                     <div class="kibar-form-row">
-                        <label>ÇKS Tarihi</label>
-                        <input type="date" id="editCksTarih">
+                        <label>Başvuru Tarihi</label>
+                        <input type="text" id="editBasvuruTarih" readonly>
                     </div>
                     <div class="kibar-form-row">
-                        <label>ÇKS Personeli</label>
-                        <input type="text" id="editCksPersonel">
+                        <label>Kabul Personeli</label>
+                        <input type="text" id="editKabulPersonel" readonly>
+                    </div>
+                </div>
+                <div class="kibar-divider"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="kibar-form-row">
+                        <label>TARBİS DİLEKÇE NO</label>
+                        <input type="text" id="edittkgm" placeholder="Tarbis No Girin">
+                    </div>
+                    <div class="kibar-form-row">
+                        <label>Notlar</label>
+                        <textarea id="editNotlar" rows="2" placeholder="Varsa not ekleyin..."></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="kibar-modal-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%; border-top:1px solid #eee; padding-top:15px; margin-top:20px;">
-                
-                <button class="kibar-btn" style="background:#e67e22; color:white; box-shadow:0 4px 10px rgba(230,126,34,0.3);" onclick="eksiklerModaliniAc()">
-                    <i class="fa fa-exclamation-triangle"></i> Eksikleri Düzenle
-                </button>
-                
-                <div style="display:flex; gap:10px;">
-                    <button class="kibar-btn kibar-btn-vazgec" onclick="this.closest('.overlay').classList.remove('active')">İptal</button>
-                    <button class="kibar-btn kibar-btn-kaydet" id="normalKaydetBtn" style="display:none;" onclick="cksGirisKaydet()">
-                        <i class="fa fa-save"></i> Kaydet
+            <div id="duzenleTabCks" class="duzenle-tab-panel">
+                <div id="cksEkleSection" style="text-align:center; display:none; padding: 10px 0;">
+                    <p style="color:#666; font-size:13px; margin-bottom:12px;">ÇKS girişi henüz yapılmamış. Tek tıkla işaretleyebilirsiniz.</p>
+                    <button class="kibar-btn kibar-btn-cks" id="modalIciCksEkleBtn">
+                        <i class="fa fa-check-circle"></i> ÇKS Yapıldı Olarak İşaretle
                     </button>
                 </div>
+                <div id="cksInputsSection" style="display:none;" class="cks-kutu">
+                    <div class="kibar-form-grid">
+                        <div class="kibar-form-row">
+                            <label>ÇKS Durumu</label>
+                            <select id="editCksDurum">
+                                <option value="">- Seçiniz -</option>
+                                <option value="YAPILDI">YAPILDI</option>
+                                <option value="BEKLENİYOR">BEKLENİYOR</option>
+                                <option value="YOK">YOK</option>
+                            </select>
+                        </div>
+                        <div class="kibar-form-row">
+                            <label>ÇKS Tarihi</label>
+                            <input type="date" id="editCksTarih">
+                        </div>
+                        <div class="kibar-form-row">
+                            <label>ÇKS Personeli</label>
+                            <input type="text" id="editCksPersonel">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <div id="duzenleTabEksikler" class="duzenle-tab-panel">
+                <div class="arsiv-bilgi-kutu">
+                    <i class="fa fa-clipboard-list" style="font-size:32px; color:#e67e22; margin-bottom:10px;"></i>
+                    <p style="color:#555; font-size:14px; margin:0 0 14px;">Eksik evrak listesini ayrı pencerede düzenleyebilirsiniz.</p>
+                    <button class="kibar-btn" style="background:#e67e22; color:white;" onclick="eksiklerModaliniAc()">
+                        <i class="fa fa-exclamation-triangle"></i> Eksikleri Düzenle
+                    </button>
+                </div>
+            </div>
+
+            <div class="kibar-modal-footer" style="display:flex; justify-content:flex-end; align-items:center; width:100%; border-top:1px solid #eee; padding-top:15px; margin-top:20px; gap:10px;">
+                <button class="kibar-btn kibar-btn-vazgec" onclick="this.closest('.overlay').classList.remove('active')">İptal</button>
+                <button class="kibar-btn kibar-btn-kaydet" id="normalKaydetBtn" style="display:none;" onclick="cksGirisKaydet()">
+                    <i class="fa fa-save"></i> Kaydet
+                </button>
             </div>
         </div>
     </div>
@@ -1663,62 +1754,8 @@ async function ekBilgiYukle() {
             if (aktifKayit) {
                 currentData = aktifKayit; 
                 const d = aktifKayit;
-                const cksClass = d.çks === 'YAPILDI' ? 'cks-yapildi' : (d.çks === 'BEKLENİYOR' ? 'cks-bekleniyor' : 'cks-yok');
 console.log("Dilekçe Detayı:", d);
-                // AKTİF DÖNEM GÖRÜNTÜLEME içindeki tabloAlani.innerHTML kısmını şununla değiştir:
-               tabloAlani.innerHTML = `
-    <div style="background:#e8f5e8; padding:8px 15px; border-radius:6px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #c8e6c9;">
-        <span style="color:#006400; font-weight:bold; font-size:15px;">
-            <i class="fa fa-calendar-check"></i> ${aktifYil} ÜRETİM YILI AKTİF KAYDI
-        </span>
-        <button onclick="aktifDetayModalAc()" class="btn-kibar" style="background:#34495e; color:white; padding:6px 15px; font-size:12px; border-radius:20px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
-            <i class="fa fa-list-alt"></i> Tüm Dosya Özeti
-        </button>
-    </div>
-    <table style="width:100%; border-collapse:collapse; font-size:14px; background:white;">
-        <tr>
-            <th style="text-align:left; padding:10px; border-bottom:1px solid #eee; background:#f9f9f9; width:20%;">Dilekçe No</th>
-            <td style="padding:10px; border-bottom:1px solid #eee; width:30%;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="font-weight:bold; color:red; font-size:16px;">${d.dilekçeno}</span>
-                    <button onclick="openDuzenleModal()" title="Dilekçeyi Düzenle" style="background:#546e7a; color:white; border:none; padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 4px rgba(0,0,0,0.1); transition: 0.2s;" onmouseover="this.style.background='#34495e'" onmouseout="this.style.background='#546e7a'">
-                        <i class="fa fa-edit"></i> Düzenle
-                    </button>
-                    
-                    ${d.KlasorNo ? `
-                        <div class="arsiv-onizleme-wrapper">
-                            <div class="arsiv-badge">
-                                <i class="fas fa-folder-open"></i> ${d.KlasorNo}. Klasör
-                            </div>
-                            <div class="arsiv-popup">
-                                <div class="arsiv-icerik">
-                                     <img src="/img/odalar/${d.OdaNo}.jpg" 
-                                          alt="Oda Arşivi" 
-                                          onerror="this.src='/img/odalar/no-image.jpg'"
-                                          style="width:100%; height:180px; object-fit:cover; display:block;">
-                                     <div class="arsiv-yazi">${d.OdaNo}. No'lu Oda / Arşiv Alanı</div>
-                                </div>
-                            </div>
-                        </div>
-                    ` : '<span style="color:#ddd; font-size:11px; margin-left:10px;">(Arşiv Kaydı Yok)</span>'}
-                </div>
-            </td>
-            <th style="text-align:left; padding:10px; border-bottom:1px solid #eee; background:#f9f9f9; width:20%;">ÇKS Durumu</th>
-            <td style="padding:10px; border-bottom:1px solid #eee; width:30%;"><span class="${cksClass}" style="padding:4px 10px; border-radius:15px; font-weight:bold;">${d.çks || 'YOK'}</span></td>
-        </tr>
-        <tr>
-            <th style="text-align:left; padding:10px; border-bottom:1px solid #eee; background:#f9f9f9;">Başvuru Tarihi</th>
-            <td style="padding:10px; border-bottom:1px solid #eee;">${formatDate(d.başvurutarihi)}</td>
-            <th style="text-align:left; padding:10px; border-bottom:1px solid #eee; background:#f9f9f9;">ÇKS Tarihi</th>
-            <td style="padding:10px; border-bottom:1px solid #eee;">${formatDate(d.çkstarih)}</td>
-        </tr>
-        <tr>
-            <th style="text-align:left; padding:10px; border-bottom:1px solid #eee; background:#f9f9f9;">Dosya Personeli</th>
-            <td style="padding:10px; border-bottom:1px solid #eee;">${d.kullanıcıı || '-'}</td>
-            <th style="text-align:left; padding:10px; border-bottom:1px solid #eee; background:#f9f9f9;">ÇKS Personeli</th>
-            <td style="padding:10px; border-bottom:1px solid #eee;">${d.çkskullanıcıı || '-'}</td>
-        </tr>
-    </table>`;
+                tabloAlani.innerHTML = renderAktifKayitPanel(d, aktifYil, window.aktifTaramalar || []);
                 if (duzenleBtn) duzenleBtn.style.display = 'inline-block';
             } else {
                 tabloAlani.innerHTML = renderYeniDilekceButonu(aktifYil);
@@ -1730,8 +1767,8 @@ console.log("Dilekçe Detayı:", d);
             // --- 2. SEKME: ARŞİV (GEÇMİŞ DÖNEMLER) DOLDURMA ---
             if (gecmisBasvurular.length > 0) {
                 let arsivHtml = `
-                    <div style="padding-top: 5px;">
-                        <table class="gecmis-basvuru-table" style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 3px 12px rgba(0,0,0,0.08); font-size:13px; table-layout: fixed;">
+                    <div class="gecmis-scroll-kutu">
+                        <table class="gecmis-basvuru-table" style="width:100%; min-width:520px; border-collapse:collapse; background:white; font-size:11px; table-layout:fixed;">
                             <thead style="background:#34495e; color:white; font-size:13px;">
                                 <tr>
                                     <th style="padding:10px 5px; width:8%; text-align:center;">Dönem</th>
@@ -1746,7 +1783,7 @@ console.log("Dilekçe Detayı:", d);
                             <tbody>`;
 
                 gecmisBasvurular.forEach(g => {
-                    const durumBadge = g.çks === 'YAPILDI' 
+                    const durumBadge = cksDurumNorm(g.çks) === 'YAPILDI' 
                         ? '<span style="color:#27ae60;font-weight:bold;">VAR</span>' 
                         : '<span style="color:#c0392b;font-weight:bold;">YOK</span>';
 
@@ -1772,9 +1809,9 @@ console.log("Dilekçe Detayı:", d);
                 arsivContainer.innerHTML = arsivHtml;
             } else {
                 arsivContainer.innerHTML = `
-                    <div style="text-align:center; padding:40px; color:#95a5a6; background:#f9f9f9; border-radius:10px; border:1px dashed #ccc;">
-                        <i class="fa fa-folder-open fa-3x" style="margin-bottom:15px;"></i><br>
-                        Bu çiftçiye ait geçmiş dönem kaydı bulunamadı.
+                    <div style="text-align:center; padding:20px; color:#95a5a6; background:#f9f9f9; border-radius:8px; border:1px dashed #ccc; font-size:12px;">
+                        <i class="fa fa-folder-open fa-2x" style="margin-bottom:8px;"></i><br>
+                        Geçmiş dönem kaydı yok.
                     </div>`;
             }
         }
@@ -1936,18 +1973,28 @@ async function taramaGecmisiYukle() {
         });
         const detaylar = await res.json();
 
-        // Sadece "Bu Yıl" olanları filtreliyoruz
         const aktifTaramalar = detaylar.filter(d => d.yil == aktifYil);
+        window.aktifTaramalar = aktifTaramalar;
 
-        // --- AKTİF DÖNEM TARAMALARI (Sadece Ana Ekranda Görünecek) ---
-        if (!aktifTaramalar || aktifTaramalar.length === 0) {
+        let gosterilecek = aktifTaramalar;
+        if (currentData && currentData.dilekçeno) {
+            const filtreli = taramalariDilekceFiltrele(aktifTaramalar, currentData.dilekçeno, aktifYil);
+            if (filtreli.length) gosterilecek = filtreli;
+        }
+
+        if (!gosterilecek || gosterilecek.length === 0) {
+            const mesaj = aktifTaramalar.length && currentData?.dilekçeno
+                ? `${aktifYil} yılında dilekçe ${currentData.dilekçeno} için tarama yok.`
+                : `${aktifYil} yılı taranmış belge yok.`;
             taramaDiv.innerHTML = `
-                <div style="padding:15px; background:#f1f8e9; border-radius:10px; color:#558b2f; border:1px dashed #8bc34a;">
-                    <i class="fa fa-info-circle"></i> ${aktifYil} yılına ait taranmış belge bulunmamaktadır.
+                <div style="padding:10px 12px; background:#f1f8e9; border-radius:8px; color:#558b2f; border:1px dashed #8bc34a; font-size:12px;">
+                    <i class="fa fa-info-circle"></i> ${mesaj}
                 </div>`;
         } else {
-            taramaDiv.innerHTML = taramaTablosuCiz(aktifTaramalar, false); // false = Yıl sütununu gizle
+            taramaDiv.innerHTML = taramaTablosuCiz(gosterilecek, false);
         }
+
+        yenidenCizAktifKayit();
 
         // --- GEÇMİŞ DÖNEM TARAMALARI EKRANDAN KALDIRILDI ---
         // Artık geçmiş PDF'ler sadece listedeki "Özet" butonuna tıklanınca şık modalın içinde görünecek.
@@ -1967,40 +2014,40 @@ async function taramaGecmisiYukle() {
 // 🗂️ TABLOYU ÇİZME FONKSİYONU
 // 🗂️ TABLOYU ÇİZME FONKSİYONU (PDF AÇMA ÖZELLİĞİ EKLENDİ)
 function taramaTablosuCiz(liste, yilGoster) {
-    let html = `<div style="width:100%; overflow-x:auto; border:1px solid #e0e0e0; border-radius:10px; margin-bottom:30px; background:white;">
-            <table style="width:100%; margin:0; border-collapse:collapse; font-size:13px; background:white;">
-                <thead style="background:#f1f8e9;">
+    let html = `<div class="tarama-scroll-kutu"><table style="width:100%;margin:0;border-collapse:collapse;background:white;">
+                <thead style="background:#f1f8e9;position:sticky;top:0;z-index:1;">
                     <tr>
-                        ${yilGoster ? '<th style="padding:12px; border-bottom:1px solid #ddd; text-align:center;">Yıl</th>' : ''}
-                        <th style="padding:12px; border-bottom:1px solid #ddd; text-align:left;">Dosya Adı</th>
-                        <th style="padding:12px; border-bottom:1px solid #ddd; text-align:center;">S. Sayısı</th> 
-                        <th style="padding:12px; border-bottom:1px solid #ddd; text-align:left;">Kayıt Tarihi</th>
-                        <th style="padding:12px; border-bottom:1px solid #ddd; text-align:left;">İşlem Yapan</th>
-                        <th style="padding:12px; border-bottom:1px solid #ddd; text-align:center;">İşlemler</th>
+                        ${yilGoster ? '<th style="border-bottom:1px solid #ddd;text-align:center;">Yıl</th>' : ''}
+                        <th style="border-bottom:1px solid #ddd;text-align:left;">Dosya</th>
+                        <th style="border-bottom:1px solid #ddd;text-align:center;width:28px;">Syf</th>
+                        <th style="border-bottom:1px solid #ddd;text-align:left;">BelgeNet</th>
+                        <th style="border-bottom:1px solid #ddd;text-align:left;width:64px;">Tarih</th>
+                        <th style="border-bottom:1px solid #ddd;text-align:left;">Personel</th>
+                        <th style="border-bottom:1px solid #ddd;text-align:center;width:28px;"></th>
                     </tr>
                 </thead>
                 <tbody>`;
 
     liste.forEach(d => {
-        // "dosyadı" verisini garantili alıyoruz
         const gercekDosya = d.dosyadı || d.dosyadi || '-';
         const gercekYil = d.yil || '2026';
         const sSayisi = d.sayfasayisi || d.sayfa_sayisi || '0';
-        const islemYapan = d.kullanıcı || d.kullanici || '-';
-        const islemTarihi = d.tarih_tr || d.tarih || '-'; 
+        const islemYapan = d.kullanıcı || d.kullanici || d.bkullanici || '-';
+        const islemTarihi = d.tarih_tr || d.tarih || '-';
+        const bNo = d.belgenet_no;
+        const bGecerli = belgenetNoGecerli(bNo);
+        const bGoster = bGecerli ? bNo : '—';
         
         html += `
-            <tr ondblclick="pdfAc('${gercekDosya}')" title="PDF'i Açmak İçin Çift Tıkla" style="cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                ${yilGoster ? `<td style="padding:12px; border-bottom:1px solid #eee; text-align:center;"><span style="background:#546e7a; color:white; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:11px;">${gercekYil}</span></td>` : ''}
-                <td style="padding:12px; border-bottom:1px solid #eee; color:#2e7d32; font-weight:bold;"><i class="fa fa-file-pdf"></i> ${gercekDosya}</td>
-                <td style="padding:12px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#c0392b;">${sSayisi}</td> 
-                <td style="padding:12px; border-bottom:1px solid #eee;">${islemTarihi}</td> 
-                <td style="padding:12px; border-bottom:1px solid #eee; color:#555;">${islemYapan}</td>
-                <td style="padding:8px 12px; border-bottom:1px solid #eee; text-align:center;">
-                    <button onclick="event.stopPropagation(); detayPaneliAc('${gercekDosya}', '${gercekYil}', '${sSayisi}', '${islemTarihi}', '${islemYapan}')" 
-        style="background-color: #17a2b8; color: white; border: none; padding: 4px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; height: 26px;">
-    🔍
-</button>
+            <tr ondblclick="pdfAc('${gercekDosya}')" title="${gercekDosya} — çift tık: PDF aç" style="cursor:pointer;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
+                ${yilGoster ? `<td style="border-bottom:1px solid #eee;text-align:center;"><span style="background:#546e7a;color:white;padding:2px 6px;border-radius:4px;font-size:10px;">${gercekYil}</span></td>` : ''}
+                <td style="border-bottom:1px solid #eee;color:#2e7d32;font-weight:600;" title="${gercekDosya}"><i class="fa fa-file-pdf"></i> <span class="tarama-dosya-adi">${gercekDosya}</span></td>
+                <td style="border-bottom:1px solid #eee;text-align:center;font-weight:bold;color:#c0392b;">${sSayisi}</td>
+                <td style="border-bottom:1px solid #eee;font-size:10px;font-weight:bold;color:${bGecerli ? '#27ae60' : '#c0392b'};" title="${bGecerli ? 'BelgeNet: ' + bNo : 'BelgeNet girilmedi'}">${bGoster}</td>
+                <td style="border-bottom:1px solid #eee;font-size:10px;color:#666;white-space:nowrap;">${islemTarihi}</td>
+                <td style="border-bottom:1px solid #eee;" title="${islemYapan}"><span class="tarama-personel">${islemYapan}</span></td>
+                <td style="border-bottom:1px solid #eee;text-align:center;">
+                    <button onclick="event.stopPropagation(); detayPaneliAc('${gercekDosya}', '${gercekYil}', '${sSayisi}', '${islemTarihi}', '${islemYapan}')" title="Detay / Sil" style="background:#17a2b8;color:#fff;border:none;padding:3px 7px;cursor:pointer;border-radius:4px;font-size:11px;">🔍</button>
                 </td>
             </tr>`;
     });
@@ -2217,6 +2264,189 @@ async function yeniDilekceOlusturOtomatik() {
         alert("Dilekçe numarası alınırken hata oluştu."); 
     }
 }
+function cksDurumNorm(v) {
+    return String(v || '').trim().toLocaleUpperCase('tr-TR');
+}
+
+function belgenetNoGecerli(no) {
+    const n = String(no || '').trim();
+    return n && n !== '-' && n !== '0';
+}
+
+function dosyadanDilekceNoCikar(dosyaAdi, aktifYil) {
+    const ad = String(dosyaAdi || '').replace(/\.pdf$/i, '').trim();
+    if (!ad) return null;
+    const yilMatch = ad.match(new RegExp(`^${aktifYil}-(\\d+)`));
+    if (yilMatch) return yilMatch[1];
+    const tire = ad.indexOf('-');
+    if (tire > 0) return ad.substring(0, tire);
+    if (/^\d+$/.test(ad)) return ad;
+    return null;
+}
+
+function taramalariDilekceFiltrele(liste, dilekceNo, aktifYil) {
+    if (!dilekceNo) return liste || [];
+    return (liste || []).filter(t => {
+        const dosya = t.dosyadı || t.dosyadi || '';
+        const cikar = dosyadanDilekceNoCikar(dosya, aktifYil);
+        return cikar && String(cikar) === String(dilekceNo);
+    });
+}
+
+function taramaDurumuHesapla(taramalar, dilekceNo, aktifYil) {
+    const ilgili = taramalariDilekceFiltrele(taramalar, dilekceNo, aktifYil);
+    const taranmis = ilgili.filter(t => {
+        const dosya = String(t.dosyadı || t.dosyadi || '').trim();
+        return dosya && dosya !== '-';
+    });
+    const adet = taranmis.length;
+    return { tamam: adet > 0, bekliyor: false, adet, ilgili: taranmis };
+}
+
+function belgenetDurumuHesapla(taramalar, dilekceNo, aktifYil) {
+    const ilgili = taramalariDilekceFiltrele(taramalar, dilekceNo, aktifYil);
+    if (!ilgili.length) return { tamam: false, bekliyor: false, ilgili: [], ozet: '' };
+    const girilen = ilgili.filter(t => belgenetNoGecerli(t.belgenet_no));
+    const tamam = girilen.length === ilgili.length;
+    const bekliyor = !tamam && girilen.length > 0;
+    const ozet = tamam
+        ? [...new Set(girilen.map(t => t.belgenet_no))].join(', ')
+        : (girilen.length ? `${girilen.length}/${ilgili.length} evrak` : '');
+    return { tamam, bekliyor, ilgili, ozet, bekleyen: ilgili.length > 0 && !tamam };
+}
+
+function yenidenCizAktifKayit() {
+    const aktifYil = localStorage.getItem('aktifCksYili') || '2026';
+    const tabloAlani = document.getElementById('tabloAlani');
+    if (tabloAlani && currentData) {
+        tabloAlani.innerHTML = renderAktifKayitPanel(currentData, aktifYil, window.aktifTaramalar || []);
+    }
+}
+
+function renderAktifKayitPanel(d, aktifYil, taramalar) {
+    taramalar = taramalar || window.aktifTaramalar || [];
+    const cksVal = cksDurumNorm(d.çks);
+    const cksTamam = cksVal === 'YAPILDI';
+    const cksBekliyor = cksVal === 'BEKLENİYOR';
+    const cksClass = cksTamam ? 'cks-yapildi' : (cksBekliyor ? 'cks-bekleniyor' : 'cks-yok');
+    const tarbisTamam = !!(d.tkgm && String(d.tkgm).trim());
+    const tr = taramaDurumuHesapla(taramalar, d.dilekçeno, aktifYil);
+    const taramaTamam = tr.tamam;
+    const bg = belgenetDurumuHesapla(taramalar, d.dilekçeno, aktifYil);
+    const belgenetTamam = bg.tamam;
+    const belgenetBekliyor = taramaTamam && (bg.bekliyor || bg.bekleyen);
+    const trgmVal = d.tkgm && String(d.tkgm).trim();
+    const belgenetMetin = bg.ozet || (bg.ilgili.length ? 'Girilmedi' : 'Tarama yok');
+    const belgenetSinif = belgenetTamam ? 'tamam' : (belgenetBekliyor ? 'bekliyor' : 'bos');
+    const adim = (etiket, tamam, bekliyor, title) => {
+        const sinif = tamam ? 'tamam' : (bekliyor ? 'bekliyor' : 'eksik');
+        const ikon = tamam ? 'fa-check' : (bekliyor ? 'fa-clock' : 'fa-circle');
+        const tipMetin = title ? `${title} — çift tık: düzenle` : 'Çift tık: düzenle';
+        return `<div class="durum-adim tiklanabilir ${sinif}" title="${tipMetin}" ondblclick="adimDblClick('${etiket}')"><div class="adim-ikon"><i class="fa ${ikon}"></i></div><span class="adim-etiket">${etiket}</span></div>`;
+    };
+    const cizgi = (tamam) => `<div class="durum-cizgi ${tamam ? 'tamam' : ''}"></div>`;
+    return `
+    <div class="aktif-kayit-kart">
+        <div class="aktif-kayit-ust">
+            <span><i class="fa fa-calendar-check"></i> ${aktifYil} Aktif Kayıt</span>
+        </div>
+        <nav class="aktif-ust-menu">
+            <button type="button" class="aktif-menu-item menu-tarbis" onclick="openDuzenleModalTab('genel')"><i class="fa fa-pen-to-square"></i> TARBİS / Not</button>
+            <button type="button" class="aktif-menu-item menu-cks ${cksTamam ? 'tamam' : ''}" onclick="${cksTamam ? '' : 'hizliCksAc()'}" ${cksTamam ? 'disabled' : ''}><i class="fa fa-${cksTamam ? 'check' : 'seedling'}"></i> ${cksTamam ? 'ÇKS Tamam' : 'ÇKS İşaretle'}</button>
+            <button type="button" class="aktif-menu-item menu-ozet" onclick="aktifDetayModalAc()"><i class="fa fa-list-alt"></i> Dosya Özeti</button>
+        </nav>
+        <div class="aktif-durum-serit">
+            <div class="aktif-dilekce-no-kutu">
+                <span class="no-etiket">Dilekçe No</span>
+                <span class="no-deger">${d.dilekçeno}</span>
+            </div>
+            <div class="aktif-durum-adimlar">
+                ${adim('Dilekçe', true, false)}${cizgi(true)}
+                ${adim('TARBİS', tarbisTamam, !tarbisTamam && !!d.dilekçeno)}${cizgi(tarbisTamam)}
+                ${adim('ÇKS', cksTamam, cksBekliyor)}${cizgi(cksTamam)}
+                ${adim('Tarama', taramaTamam, false, taramaTamam ? `${tr.adet} evrak tarandı` : 'Henüz tarama yok')}${cizgi(taramaTamam)}
+                ${adim('BelgeNet', belgenetTamam, belgenetBekliyor, belgenetTamam ? bg.ozet : (taramaTamam ? 'BelgeNet bekleniyor' : 'Önce tarama gerekli'))}
+            </div>
+        </div>
+        <div class="aktif-ozet-wrap">
+            <div class="aktif-ozet-grid">
+                <div class="aktif-ozet-hucre">
+                    <label><i class="fa fa-calendar-check"></i> Dosya Başvurusu</label>
+                    <div class="deger">${formatDate(d.başvurutarihi)}</div>
+                </div>
+                <div class="aktif-ozet-hucre">
+                    <label><i class="fa fa-seedling"></i> ÇKS Durumu</label>
+                    <div class="deger"><span class="cks-durum-rozet ${cksClass}">${d.çks || 'YOK'}</span></div>
+                </div>
+                <div class="aktif-ozet-hucre">
+                    <label><i class="fa fa-hashtag"></i> TRGM</label>
+                    <div class="deger ozet-deger-trgm ${trgmVal ? '' : 'bos'}" title="${trgmVal || 'TRGM girilmedi'}">${trgmVal || '—'}</div>
+                </div>
+                <div class="aktif-ozet-hucre">
+                    <label><i class="fa fa-calendar"></i> ÇKS Tarihi</label>
+                    <div class="deger">${formatDate(d.çkstarih) || '—'}</div>
+                </div>
+                <div class="aktif-ozet-hucre">
+                    <label><i class="fa fa-user"></i> Dosya Personeli</label>
+                    <div class="deger ozet-deger-personel" title="${d.kullanıcıı || ''}">${d.kullanıcıı || '—'}</div>
+                </div>
+                <div class="aktif-ozet-hucre">
+                    <label><i class="fa fa-user-check"></i> ÇKS Personeli</label>
+                    <div class="deger ozet-deger-personel" title="${d.çkskullanıcıı || ''}">${d.çkskullanıcıı || '—'}</div>
+                </div>
+                <div class="aktif-ozet-hucre ozet-belgenet-bar">
+                    <label><i class="fa fa-cloud"></i> BelgeNet</label>
+                    <div class="ozet-belgenet-icerik ${belgenetSinif}" title="${belgenetMetin}">${belgenetMetin}</div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function duzenleSekmeDegistir(sekme) {
+    document.querySelectorAll('.duzenle-sekme-btn').forEach(b => b.classList.toggle('aktif', b.dataset.sekme === sekme));
+    document.querySelectorAll('.duzenle-tab-panel').forEach(p => p.classList.remove('aktif'));
+    const panel = document.getElementById('duzenleTab' + sekme.charAt(0).toUpperCase() + sekme.slice(1));
+    if (panel) panel.classList.add('aktif');
+    const kaydetBtn = document.getElementById('normalKaydetBtn');
+    if (kaydetBtn) kaydetBtn.style.display = (sekme === 'genel' || sekme === 'cks') ? 'inline-flex' : 'none';
+}
+
+function openDuzenleModalTab(sekme) {
+    openDuzenleModal();
+    duzenleSekmeDegistir(sekme || 'genel');
+}
+
+function ozetHucreDuzenle(sekme, focusId) {
+    if (sekme === 'cks') {
+        hizliCksAc();
+        if (focusId) {
+            setTimeout(() => {
+                if (document.getElementById('cksInputsSection')?.style.display !== 'none') {
+                    document.getElementById(focusId)?.focus();
+                }
+            }, 200);
+        }
+        return;
+    }
+    openDuzenleModalTab(sekme || 'genel');
+    if (focusId) setTimeout(() => document.getElementById(focusId)?.focus(), 120);
+}
+
+function adimDblClick(etiket) {
+    if (etiket === 'Tarama' || etiket === 'BelgeNet') aktifDetayModalAc();
+    else if (etiket === 'ÇKS') hizliCksAc();
+    else openDuzenleModalTab('genel');
+}
+
+function hizliCksAc() {
+    openDuzenleModalTab('cks');
+    const cksDolu = (currentData.çks || '').trim() || (currentData.çkstarih || '').trim();
+    if (!cksDolu) {
+        setTimeout(() => document.getElementById('modalIciCksEkleBtn')?.click(), 80);
+    }
+}
+
 function openDuzenleModal() {
     if (!currentData) return;
     
@@ -2255,6 +2485,7 @@ function openDuzenleModal() {
         document.getElementById('normalKaydetBtn').style.display = 'inline-block';
     }
 
+    duzenleSekmeDegistir('genel');
     document.getElementById('duzenleOverlay').classList.add('active');
 }
 
@@ -2600,7 +2831,7 @@ async function aktifDetayModalAc() {
 
     // 2. ÇKS Verileri
     const d = currentData;
-    const cksDurumRenk = d.çks === 'YAPILDI' ? '#27ae60' : '#c0392b';
+    const cksDurumRenk = cksDurumNorm(d.çks) === 'YAPILDI' ? '#27ae60' : '#c0392b';
 
     // 3. Tarama Listesi HTML'ini Oluştur
     let taramaListesiHtml = '';
@@ -2742,7 +2973,7 @@ async function gecmisDetayModalAc(secilenYil) {
         console.error("Tarama verisi çekilemedi", e);
     }
 
-    const cksDurumRenk = d.çks === 'YAPILDI' ? '#27ae60' : '#c0392b';
+    const cksDurumRenk = cksDurumNorm(d.çks) === 'YAPILDI' ? '#27ae60' : '#c0392b';
 
     // 3. Tarama Listesi HTML'ini Oluştur
     let taramaListesiHtml = '';

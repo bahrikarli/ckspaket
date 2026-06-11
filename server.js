@@ -57,11 +57,7 @@ const PDFKitDocument = require('pdfkit');
 
 app.use(cors());
 app.use(express.json());
-const ozelSayfaStatic = new Set(['/', '/index.html', '/anasayfa.html']);
-app.use((req, res, next) => {
-  if (ozelSayfaStatic.has(req.path)) return next();
-  express.static(__dirname, { index: false })(req, res, next);
-});
+app.use(express.static(__dirname));
 // Uploads klasörü oluştur
 // 🎯 SİHİRLİ YOL BULUCU: Program .exe ise dışarıdaki gerçek klasörü, kod ise bulunduğu yeri bulur.
 const gercekKlasor = process.pkg ? path.dirname(process.execPath) : __dirname;
@@ -181,7 +177,7 @@ const dbConfig = {
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASS || '189189',
   server: process.env.DB_SERVER || 'YENISERVER',
-  database: process.env.DB_NAME || 'ckspaketdata',
+  database: process.env.DB_NAME || 'demoanaa',
   options: {
         encrypt: false,
         trustServerCertificate: true,
@@ -279,12 +275,8 @@ const sadeceAdminSayfa = (req, res, next) => {
 app.use('/api', require('./auth'));
 
 // TÜM SAYFALAR
-if (CKSPAKET_MOD) {
-  require('./kurum-sunucu').registerKurumSunucu(app, { getPool, gercekKlasor, authenticateToken });
-} else {
-  app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-  app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
-}
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
 app.get('/dashboard.html', authenticateToken, sadeceAdmin, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/mesajlar.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesajlar.html')));
 app.get('/profil.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'profil.html')));
@@ -303,6 +295,13 @@ app.get('/mesai-takip.html', authenticateToken, (req, res) => res.sendFile(path.
 app.get('/mesai-zobis-hatirlatma-test.html', authenticateToken, sadeceAdminSayfa, (req, res) =>
   res.sendFile(path.join(__dirname, 'mesai-zobis-hatirlatma-test.html'))
 );
+
+// Tarım Rehberi (TMO, hava, zirai mücadele) — erken kayıt
+const mesaiWa = require('./mesai-whatsapp');
+const { mountTarimRehber } = require('./tarim-rehber');
+const { registerKonumYonetim } = require('./konum-yonetim');
+mountTarimRehber(app, { getPool, authenticateToken, mesaiWa });
+registerKonumYonetim(app, { getPool, authenticateToken, sadeceAdmin, sql });
 
 /** Tarayıcı adres çubuğu GET — test sayfasına yönlendir */
 app.get('/api/mesai/zobis-hatirlatma-test', (req, res) => {
@@ -393,19 +392,13 @@ app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) =>
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad, '') AS ad, ISNULL(Soyad, '') AS soyad,
-             ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
+      SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
              ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol
       FROM Kullanicilar ORDER BY rol DESC, Ad
     `);
     res.json(result.recordset);
   } catch (err) { res.json([]); }
 });
-
-if (CKSPAKET_MOD) {
-  const { registerPaketAdmin } = require('./paket-admin');
-  registerPaketAdmin(app, { CKSPAKET_MOD, authenticateToken, sadeceAdmin, sql, getPool });
-}
 
 // ÇKS LİSTE & ARAMA – HEM İLK 100 HEM DE TÜM TABLODA ARAMA (%100 ÇALIŞIR)
 // ÇKS LİSTE & ARAMA – HEM İLK 100 HEM DE TÜM TABLODA ARAMA (%100 ÇALIŞIR)
@@ -861,6 +854,17 @@ app.post('/api/cks-modal-ozel-kaydet', authenticateToken, async (req, res) => {
     }
 });
 
+/** belgenet.dosyadı → dilekçe no (2027-123-… ile eski 123-… uyumlu) */
+const BELGENET_DILEKCE_NO_SQL = `CASE 
+  WHEN LEN(dosyadı) >= 5 AND dosyadı LIKE '[0-9][0-9][0-9][0-9]-%'
+    THEN LEFT(SUBSTRING(dosyadı, 6, 8000),
+      CASE WHEN CHARINDEX('-', SUBSTRING(dosyadı, 6, 8000)) > 0
+           THEN CHARINDEX('-', SUBSTRING(dosyadı, 6, 8000)) - 1
+           ELSE LEN(SUBSTRING(dosyadı, 6, 8000)) END)
+  WHEN CHARINDEX('-', dosyadı) > 0 THEN LEFT(dosyadı, CHARINDEX('-', dosyadı) - 1)
+  ELSE dosyadı
+END`;
+
 app.get('/api/klasor-sayfa-istatistik', authenticateToken, async (req, res) => {
     try {
         const pool = await getPool();
@@ -869,7 +873,7 @@ app.get('/api/klasor-sayfa-istatistik', authenticateToken, async (req, res) => {
         const aralikSorgu = await pool.request().query(`
             WITH Evraklar AS (
                 SELECT 
-                    TRY_CAST(CASE WHEN CHARINDEX('-', dosyadı) > 0 THEN LEFT(dosyadı, CHARINDEX('-', dosyadı) - 1) ELSE dosyadı END AS INT) AS DilekceNo,
+                    TRY_CAST(${BELGENET_DILEKCE_NO_SQL} AS INT) AS DilekceNo,
                     TRY_CAST(sayfasayısı AS INT) AS Sayfa
                 FROM belgenet 
                 WHERE dosyadı IS NOT NULL AND sayfasayısı IS NOT NULL
@@ -893,18 +897,11 @@ const topCiftciSorgu = await pool.request().query(`
         SELECT 
             kimlikid,
             -- Dosya adından tireye kadar olan kısmı (Dilekçe No) alıyoruz
-            CASE 
-                WHEN CHARINDEX('-', dosyadı) > 0 THEN LEFT(dosyadı, CHARINDEX('-', dosyadı) - 1) 
-                ELSE dosyadı 
-            END AS AnaDosyaNo,
+            ${BELGENET_DILEKCE_NO_SQL} AS AnaDosyaNo,
             SUM(TRY_CAST(sayfasayısı AS INT)) as ToplamSayfa
         FROM belgenet
         WHERE sayfasayısı IS NOT NULL AND dosyadı IS NOT NULL
-        GROUP BY kimlikid, 
-                 CASE 
-                    WHEN CHARINDEX('-', dosyadı) > 0 THEN LEFT(dosyadı, CHARINDEX('-', dosyadı) - 1) 
-                    ELSE dosyadı 
-                 END
+        GROUP BY kimlikid, ${BELGENET_DILEKCE_NO_SQL}
     )
     SELECT TOP 10 
         ISNULL(c.[Adı Soyadı], 'Bilinmeyen Çiftçi') as AdSoyad,
@@ -1172,6 +1169,7 @@ app.get('/api/MAHALLE', async (req, res) => {
     res.json([]);
   }
 });
+
 // authenticateToken KALDIRILDI → TC GÜNCELLEME HERKES YAPABİLİR (ÇKS'DE GEREK YOK)
 app.post('/api/tc-guncelle', async (req, res) => {
   try {
@@ -2107,6 +2105,62 @@ app.get('/api/tarama-sayaclar', authenticateToken, async (req, res) => {
 // ==========================================
 // BELGENET KAYIT VE TARAMA İŞLEMİ (ORİJİNAL SİSTEM)
 // ==========================================
+
+function belgenetRegexKacis(s) {
+    return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function belgenetDosyaAdiSay(dosyaAdi, yilOnEk, prefix, anaAd, ekRegex, durum) {
+    const d = String(dosyaAdi || '').replace(/\.pdf$/i, '').trim();
+    if (!d.startsWith(`${yilOnEk}-`)) return;
+    if (!d.startsWith(prefix)) return;
+    if (d === anaAd) {
+        durum.hasMain = true;
+        return;
+    }
+    const m = d.match(ekRegex);
+    if (m) durum.maxEk = Math.max(durum.maxEk, parseInt(m[1], 10));
+}
+
+async function belgenetSonrakiDosyaAdiOlustur(pool, kimlikid, aktifYil, dilekçeno, gecerliKimlikNo, arsivKlasor = null) {
+    const yilOnEk = String(aktifYil);
+    const yilNum = parseInt(yilOnEk, 10) || new Date().getFullYear();
+    const prefix = `${yilOnEk}-${dilekçeno}-`;
+    const anaAd = `${prefix}${gecerliKimlikNo}`;
+    const ekRegex = new RegExp(`^${belgenetRegexKacis(prefix)}EK-(\\d+)-${belgenetRegexKacis(gecerliKimlikNo)}$`, 'i');
+
+    const r = await pool.request()
+        .input('kid', sql.Int, kimlikid)
+        .input('yil', sql.SmallInt, yilNum)
+        .input('yilStr', sql.NVarChar, yilOnEk)
+        .input('pfx', sql.NVarChar, prefix + '%')
+        .query(`
+            SELECT dosyadı FROM belgenet
+            WHERE kimlikid = @kid
+              AND yil = @yil
+              AND dosyadı IS NOT NULL
+              AND dosyadı LIKE @pfx
+              AND LEFT(dosyadı, 4) = @yilStr
+        `);
+
+    const durum = { hasMain: false, maxEk: 0 };
+    for (const row of r.recordset) {
+        belgenetDosyaAdiSay(row.dosyadı, yilOnEk, prefix, anaAd, ekRegex, durum);
+    }
+
+    if (arsivKlasor && fs.existsSync(arsivKlasor)) {
+        for (const f of fs.readdirSync(arsivKlasor)) {
+            if (!f.toLowerCase().endsWith('.pdf')) continue;
+            belgenetDosyaAdiSay(f.replace(/\.pdf$/i, ''), yilOnEk, prefix, anaAd, ekRegex, durum);
+        }
+    }
+
+    if (!durum.hasMain) {
+        return anaAd;
+    }
+    return `${prefix}EK-${durum.maxEk + 1}-${gecerliKimlikNo}`;
+}
+
 app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
     const { kimlikid, yil } = req.body; 
     
@@ -2116,15 +2170,21 @@ app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
 
     try {
         const pool = await getPool();
+        const yilNum = parseInt(String(yil || new Date().getFullYear()), 10);
+        const aktifYil = yilNum;
 
-        // Çiftçi / Şirket Bilgilerini Al
-        const info = await pool.request().input('kid', sql.Int, kimlikid)
+        // Çiftçi / Şirket Bilgilerini Al (yalnizca secili yil dilekcesi)
+        const info = await pool.request()
+            .input('kid', sql.Int, kimlikid)
+            .input('yil', sql.SmallInt, yilNum)
             .query(`SELECT TOP 1 c.[Tc Kimlik No] as tc, c.vergino, c.tur, d.dilekçeno 
                     FROM çksdilekçe c 
-                    INNER JOIN dilekçebilgileri d ON c.kimlik = d.kimlikid 
+                    INNER JOIN dilekçebilgileri d ON c.kimlik = d.kimlikid AND d.yil = @yil
                     WHERE c.kimlik = @kid`);
 
-        if (info.recordset.length === 0) return res.json({ success: false, message: "Kişi/Kurum bilgileri bulunamadı!" });
+        if (info.recordset.length === 0) {
+            return res.json({ success: false, message: `${yilNum} yili icin dilekce kaydi bulunamadi!` });
+        }
         
         const { tc, vergino, tur, dilekçeno } = info.recordset[0];
 
@@ -2136,7 +2196,6 @@ app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
             return res.json({ success: false, message: "Hata: Kişinin TC veya Vergi Numarası sistemde kayıtlı değil!" });
         }
 
-        const aktifYil = yil || new Date().getFullYear();
         const sa = sistemAyarAl();
         const TARAMA_HAVUZU = taramaHavuzYol(sa);
         const HEDEF_KLASOR = taramaYilKlasorYol(sa, aktifYil);
@@ -2156,11 +2215,7 @@ app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
             });
         }
 
-        const countRes = await pool.request().input('kid', sql.Int, kimlikid)
-            .query(`SELECT COUNT(*) as sayi FROM belgenet WHERE kimlikid = @kid`);
-        
-        const adet = countRes.recordset[0].sayi;
-        let dosyadi = (adet === 0) ? `${dilekçeno}-${gecerliKimlikNo}` : `${dilekçeno}-EK-${adet}-${gecerliKimlikNo}`;
+        const dosyadi = await belgenetSonrakiDosyaAdiOlustur(pool, kimlikid, aktifYil, dilekçeno, gecerliKimlikNo, HEDEF_KLASOR);
         //DNM
         let otomatikSayfaSayisi = 1;
         let ilkSayfaOnizleme = null;
@@ -2194,7 +2249,7 @@ app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
             .input('kid', sql.Int, kimlikid)
             .input('dosya', sql.NVarChar, dosyadi)
             .input('kull', sql.NVarChar, kullanici)
-            .input('yil', sql.SmallInt, yil || 2026)
+            .input('yil', sql.SmallInt, yilNum)
             .input('sayfa', sql.Int, otomatikSayfaSayisi)
             .query(`
                 INSERT INTO belgenet (kimlikid, sayfasayısı, tarih, kullanıcı, dosyadı, belgenetno, yil) 
@@ -8195,11 +8250,6 @@ app.post('/api/sistem-ayarlari-guncelle', authenticateToken, sadeceAdmin, async 
   }
 });
 
-if (CKSPAKET_MOD) {
-  const { registerPaketGuncelleme } = require('./paket-guncelleme');
-  registerPaketGuncelleme(app, { gercekKlasor, CKSPAKET_MOD, authenticateToken, sadeceAdmin });
-}
-
 // ========== ÇKS SIRAMATİK (SQL Server — CKS_Sira tablosu) ==========
 const siraDosya = path.join(gercekKlasor, 'sira-kuyruk.json');
 
@@ -9363,7 +9413,6 @@ app.get('/api/mesai/kartlar', authenticateToken, sadeceAdmin, async (req, res) =
 });
 
 // ========== PERSONEL MESAI — WHATSAPP (10:00 günlük özet) ==========
-const mesaiWa = require('./mesai-whatsapp');
 
 function mesaiTrTarihEtiket(tarihStr) {
   const gunler = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];

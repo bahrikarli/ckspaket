@@ -57,7 +57,11 @@ const PDFKitDocument = require('pdfkit');
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+const ozelSayfaStatic = new Set(['/', '/index.html', '/anasayfa.html']);
+app.use((req, res, next) => {
+  if (ozelSayfaStatic.has(req.path)) return next();
+  express.static(__dirname, { index: false })(req, res, next);
+});
 // Uploads klasörü oluştur
 // 🎯 SİHİRLİ YOL BULUCU: Program .exe ise dışarıdaki gerçek klasörü, kod ise bulunduğu yeri bulur.
 const gercekKlasor = process.pkg ? path.dirname(process.execPath) : __dirname;
@@ -275,8 +279,12 @@ const sadeceAdminSayfa = (req, res, next) => {
 app.use('/api', require('./auth'));
 
 // TÜM SAYFALAR
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
+if (CKSPAKET_MOD) {
+  require('./kurum-sunucu').registerKurumSunucu(app, { getPool, gercekKlasor, authenticateToken });
+} else {
+  app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+  app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
+}
 app.get('/dashboard.html', authenticateToken, sadeceAdmin, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/mesajlar.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesajlar.html')));
 app.get('/profil.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'profil.html')));

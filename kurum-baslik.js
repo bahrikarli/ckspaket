@@ -4,6 +4,7 @@ async function kurumBaslikYukle(opts) {
   const titleSuffix = opts.titleSuffix != null ? opts.titleSuffix : '';
   try {
     const res = await fetch('/api/kurum-genel', { cache: 'no-store' });
+    if (!res.ok) return;
     const data = await res.json();
     if (!data.success || !data.kurum_adi) return;
     const ad = String(data.kurum_adi).trim();
@@ -15,4 +16,10 @@ async function kurumBaslikYukle(opts) {
     });
     if (titleSuffix) document.title = ad + titleSuffix;
   } catch (_) {}
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => kurumBaslikYukle());
+} else {
+  kurumBaslikYukle();
 }

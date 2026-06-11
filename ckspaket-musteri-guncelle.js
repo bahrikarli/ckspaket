@@ -9,8 +9,7 @@ const axios = require('axios');
 const { surumKarsilastir, mevcutSurumAl } = require('./paket-guncelleme');
 const { gitGuncellemeAktifMi, gitPullUygula, gitUzakSurumKontrol, gitKuruluMu, githubZipGuncelle } = require('./git-guncelleme');
 const { koruMu } = require('./guncelleme-koru');
-
-const KOK = __dirname;
+const { zipAc, kaynakTemizle, zipKaynakBul } = require('./guncelleme-zip');
 
 try {
   require('dotenv').config({ path: path.join(KOK, '.env'), quiet: true });
@@ -58,17 +57,8 @@ async function zipIndir(url, hedef) {
   fs.writeFileSync(hedef, Buffer.from(res.data));
 }
 
-function zipAc(zipYol, hedefKlasor) {
-  fs.mkdirSync(hedefKlasor, { recursive: true });
-  const ps = [
-    `$zip = '${zipYol.replace(/'/g, "''")}'`,
-    `$dst = '${hedefKlasor.replace(/'/g, "''")}'`,
-    'Expand-Archive -Path $zip -DestinationPath $dst -Force'
-  ].join('; ');
-  execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'inherit' });
-}
-
 function dosyalariUygula(kaynak, hedef) {
+  kaynakTemizle(kaynak);
   for (const ad of fs.readdirSync(kaynak)) {
     if (koruMu(ad)) {
       console.log('  atla:', ad);
@@ -104,7 +94,8 @@ async function zipGuncelle(mevcut) {
   try {
     if (fs.existsSync(tmpAc)) fs.rmSync(tmpAc, { recursive: true, force: true });
     zipAc(tmpZip, tmpAc);
-    dosyalariUygula(tmpAc, KOK);
+    const kaynakKok = zipKaynakBul(tmpAc);
+    dosyalariUygula(kaynakKok, KOK);
     yedekGeri();
   } catch (err) {
     yedekGeri();

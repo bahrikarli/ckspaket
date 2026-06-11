@@ -13,12 +13,7 @@ echo(
 echo Sunucu durduruluyor, guncelleme uygulanacak...
 echo(
 
-echo Port %CKS_PORT% temizleniyor...
-for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":%CKS_PORT%" ^| findstr LISTENING') do (
-  echo   Kapatiliyor PID: %%a
-  taskkill /F /PID %%a >nul 2>&1
-)
-timeout /t 2 /nobreak >nul
+call "%~dp0port-temizle.bat" %CKS_PORT%
 
 node ckspaket-musteri-guncelle.js
 if errorlevel 1 goto guncelleme_hata

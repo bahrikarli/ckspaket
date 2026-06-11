@@ -19,6 +19,5 @@ for /f "delims=" %%i in ('where node 2^>nul') do (
 :node_bulundu
 if not defined NODE_EXE exit /b 3
 
-REM /B kullanma — parent kapaninca node da kapanir. Ayri gizli cmd acilir.
-start "" /D "%~dp0" "%ComSpec%" /V:ON /C "set CKSPAKET=1&& "%NODE_EXE%" "%~dp0server.js" >> "%~dp0logs\server.log" 2>&1"
+wscript //Nologo "%~dp0sunucu-baslat.vbs"
 exit /b 0

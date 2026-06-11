@@ -7,6 +7,7 @@ const { execSync } = require('child_process');
 const axios = require('axios');
 const { mevcutSurumAl, surumKarsilastir } = require('./paket-guncelleme');
 const { koruMu } = require('./guncelleme-koru');
+const { zipAc, kaynakTemizle, zipKaynakBul, klasorSil } = require('./guncelleme-zip');
 
 function gitVarMi(kok) {
   return fs.existsSync(path.join(kok, '.git'));
@@ -188,6 +189,7 @@ const GIT_KORU_SKIP = koruMu;
 
 function gitDosyalariKopyala(tmp, hedef) {
   console.log('Korunan (atlanir): taramalar, uploads, dist, .env, node_modules');
+  kaynakTemizle(tmp);
   for (const ad of fs.readdirSync(tmp)) {
     if (ad === '.git' || GIT_KORU_SKIP(ad)) {
       console.log('  atla:', ad);
@@ -214,16 +216,6 @@ function gitKuruluMu() {
   }
 }
 
-function zipAc(zipYol, hedefKlasor) {
-  fs.mkdirSync(hedefKlasor, { recursive: true });
-  const ps = [
-    `$zip = '${zipYol.replace(/'/g, "''")}'`,
-    `$dst = '${hedefKlasor.replace(/'/g, "''")}'`,
-    'Expand-Archive -Path $zip -DestinationPath $dst -Force'
-  ].join('; ');
-  execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'inherit' });
-}
-
 async function githubZipGuncelle(kok, koruFn) {
   const repoUrl = repoUrlAl(kok);
   const p = githubParcala(repoUrl);
@@ -237,7 +229,7 @@ async function githubZipGuncelle(kok, koruFn) {
   const tmpKok = path.join(kok, '_git_klon');
   const tmpZip = path.join(tmpKok, 'repo.zip');
   const tmpAc = path.join(tmpKok, 'acilan');
-  if (fs.existsSync(tmpKok)) fs.rmSync(tmpKok, { recursive: true, force: true });
+  klasorSil(tmpKok);
   fs.mkdirSync(tmpKok, { recursive: true });
 
   try {
@@ -253,19 +245,26 @@ async function githubZipGuncelle(kok, koruFn) {
     });
     fs.writeFileSync(tmpZip, Buffer.from(res.data));
     console.log('ZIP aciliyor...');
-    zipAc(tmpZip, tmpAc);
-    const ust = fs.readdirSync(tmpAc).filter((ad) => !ad.startsWith('.'));
-    let kaynak = tmpAc;
-    if (ust.length === 1) {
-      const pth = path.join(tmpAc, ust[0]);
-      if (fs.statSync(pth).isDirectory()) kaynak = pth;
+    try {
+      zipAc(tmpZip, tmpAc);
+    } catch (err) {
+      console.warn('ZIP acilirken uyari (dist vb. atlanmis olabilir):', err.message);
+      if (!fs.existsSync(tmpAc) || !fs.readdirSync(tmpAc).length) {
+        throw err;
+      }
+    }
+    const kaynak = zipKaynakBul(tmpAc);
+    if (!fs.existsSync(path.join(kaynak, 'package.json'))) {
+      throw new Error('ZIP gecersiz: package.json bulunamadi');
     }
     console.log('Dosyalar uygulaniyor...');
     gitDosyalariKopyala(kaynak, kok);
     if (typeof koruFn === 'function') koruFn('geri');
     return { guncellendi: true, yontem: 'github-zip' };
   } finally {
-    if (fs.existsSync(tmpKok)) fs.rmSync(tmpKok, { recursive: true, force: true });
+    try {
+      klasorSil(tmpKok);
+    } catch (_) {}
   }
 }
 

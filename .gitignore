@@ -4,3 +4,8 @@ RobotProfil/
 .env
 .wwebjs_auth/
 .wwebjs_cache/
+dist/
+guncellemeler/*.zip
+_git_klon/
+_guncelleme_yedek/
+logs/

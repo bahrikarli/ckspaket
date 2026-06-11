@@ -37,16 +37,21 @@ const KOPYALA = [
 ];
 
 const KORU = new Set([
-  'anasayfa.html', 'index.html', 'kurum-baslik.js', 'kurum-ayar.js', 'arsiv.html', 'dashboard.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'anasayfa.html', 'index.html', 'kurum-baslik.js', 'kurum-ayar.js', 'kurum-sunucu.js', 'arsiv.html', 'dashboard.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
-  'baslat.bat', 'baslat-gizli.vbs', 'durdur.bat', 'baslat-launcher.vbs', 'kisayol-olustur.vbs', 'sunucu-gizli.bat', 'sunucu-test.bat', 'sql-baglanti-test.bat', 'icon',
+  'baslat.bat', 'baslat-gizli.vbs', 'durdur.bat', 'baslat-launcher.vbs', 'kisayol-olustur.vbs', 'sunucu-baslat.vbs', 'sunucu-gizli.bat', 'sunucu-test.bat', 'port-temizle.bat', 'sql-baglanti-test.bat', 'icon',
   'ckspaket-paketle.js', 'ckspaket-paketle.bat', 'ckspaket-musteri-surum.bat',
   'ckspaket-musteri-guncelle.js', 'ckspaket-musteri-guncelle.bat', 'ckspaket-musteri-guncelle-gizli.vbs',
   'ckspaketdata-olustur.js', 'ckspaketdata-olustur.bat',
   'ckspaketdata-musteri-kur.js', 'ckspaketdata-musteri-kur.bat',
   'ckspaket-sema-yedek-al.js', 'ckspaket-sema-yedek-al.bat',
+  'ckspaket-excel-ciftci-aktar.js', 'ckspaket-excel-ciftci-aktar.bat',
+  'ckspaket-excel-dilekce-aktar.js', 'ckspaket-excel-dilekce-aktar.bat',
+  'ckspaket-excel-telefon-guncelle.js', 'ckspaket-excel-telefon-guncelle.bat',
+  'ckspaket-belgenet-pdf-eslestir.js', 'ckspaket-belgenet-pdf-eslestir.bat',
+  'ckspaket-ag-ayar.bat', 'ckspaket-ac.bat', 'ckspaket-ac.vbs', 'ag-kisayol-olustur.vbs', 'ckspaket-ag-kisayol-olustur.bat', 'CKS Paket.url',
   'MUSTERI-SQL-KURULUM.txt', 'sema',
-  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'guncelleme-koru.js', 'paket-admin.js',
+  'ckspaket-surum-ui.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'guncelleme-koru.js', 'guncelleme-zip.js', 'paket-admin.js',
   'sistem-ayar.js', 'config.js'
 ]);
 
@@ -337,6 +342,39 @@ if (CKSPAKET_MOD) {
   }
 }
 
+function kurumSunucuYamasi() {
+  const p = path.join(HEDEF, 'server.js');
+  if (!fs.existsSync(p)) return;
+  let s = oku(p);
+
+  if (!s.includes('ozelSayfaStatic')) {
+    s = s.replace(
+      /app\.use\(express\.static\(__dirname\)\);/,
+      `const ozelSayfaStatic = new Set(['/', '/index.html', '/anasayfa.html']);
+app.use((req, res, next) => {
+  if (ozelSayfaStatic.has(req.path)) return next();
+  express.static(__dirname, { index: false })(req, res, next);
+});`
+    );
+  }
+
+  if (!s.includes('registerKurumSunucu')) {
+    s = s.replace(
+      /\/\/ TÜM SAYFALAR\r?\napp\.get\('\/', \(req, res\) => res\.sendFile\(path\.join\(__dirname, 'index\.html'\)\)\);\r?\napp\.get\('\/anasayfa\.html', authenticateToken, \(req, res\) => res\.sendFile\(path\.join\(__dirname, 'anasayfa\.html'\)\)\);/,
+      `// TÜM SAYFALAR
+if (CKSPAKET_MOD) {
+  require('./kurum-sunucu').registerKurumSunucu(app, { getPool, gercekKlasor, authenticateToken });
+} else {
+  app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+  app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
+}`
+    );
+  }
+
+  yaz(p, s);
+  if (s.includes('registerKurumSunucu')) console.log('  OK: server.js kurum sunucu');
+}
+
 function paketGuncellemeYamasi() {
   const p = path.join(HEDEF, 'server.js');
   if (!fs.existsSync(p)) return;
@@ -416,6 +454,7 @@ cksHtmlPaketYamasi();
 dilekcePaketYamasi();
 ibformPaketYamasi();
 paketAdminYamasi();
+kurumSunucuYamasi();
 paketGuncellemeYamasi();
 bosTaramalarYapisi();
 

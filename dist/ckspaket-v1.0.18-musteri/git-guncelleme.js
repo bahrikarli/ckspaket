@@ -74,72 +74,51 @@ async function gitUzakSurumKontrol(kok) {
 
   const branch = dalAl();
   const mevcut = mevcutSurumAl(kok);
-  let yeniSurum = '';
-  let notlar = '';
-  let uzakHata = '';
-
-  // Önce GitHub'dan taze sürüm oku (müşteride eski git cache sorununu önler)
-  try {
-    const remotePkg = await githubDosyaOku(repoUrl, branch, 'package.json');
-    if (remotePkg) {
-      yeniSurum = String(remotePkg.version || '').trim();
-      try {
-        const surum = await githubDosyaOku(repoUrl, branch, 'surum.json');
-        notlar = surum?.notlar || '';
-      } catch (_) {}
-    }
-  } catch (err) {
-    uzakHata = err.message || 'GitHub erisilemedi';
-  }
-
-  // GitHub başarısızsa git fetch ile dene
-  if (!yeniSurum && gitVarMi(kok)) {
-    try {
-      gitCalistir(`git fetch origin ${branch}`, kok, true);
-      const remotePkgJson = gitCalistir(`git show origin/${branch}:package.json`, kok);
-      yeniSurum = String(JSON.parse(remotePkgJson).version || '').trim();
-      try {
-        const surumJson = gitCalistir(`git show origin/${branch}:surum.json`, kok);
-        notlar = JSON.parse(surumJson).notlar || '';
-      } catch (_) {}
-    } catch (err) {
-      if (!uzakHata) uzakHata = err.message;
-    }
-  }
-
-  if (!yeniSurum) {
-    return {
-      guncellemeVar: false,
-      mevcutSurum: mevcut.surum,
-      yeniSurum: '',
-      notlar: '',
-      yontem: 'git',
-      mesaj: uzakHata || 'Uzak surum okunamadi'
-    };
-  }
-
-  const surumFarki = surumKarsilastir(yeniSurum, mevcut.surum) > 0;
-  let hashFarki = false;
-  let commit = '';
 
   if (gitVarMi(kok)) {
     try {
       gitCalistir(`git fetch origin ${branch}`, kok, true);
+      const remotePkgJson = gitCalistir(`git show origin/${branch}:package.json`, kok);
+      const remotePkg = JSON.parse(remotePkgJson);
+      const yeniSurum = String(remotePkg.version || '').trim();
+      let notlar = '';
+      try {
+        const surumJson = gitCalistir(`git show origin/${branch}:surum.json`, kok);
+        notlar = JSON.parse(surumJson).notlar || '';
+      } catch (_) {}
       const localHash = gitCalistir('git rev-parse HEAD', kok);
       const remoteHash = gitCalistir(`git rev-parse origin/${branch}`, kok);
-      hashFarki = localHash !== remoteHash;
-      commit = remoteHash.slice(0, 7);
+      const guncellemeVar = localHash !== remoteHash || surumKarsilastir(yeniSurum, mevcut.surum) > 0;
+      return {
+        guncellemeVar,
+        mevcutSurum: mevcut.surum,
+        yeniSurum,
+        notlar,
+        yontem: 'git',
+        commit: remoteHash.slice(0, 7)
+      };
     } catch (_) {}
   }
 
-  return {
-    guncellemeVar: surumFarki || hashFarki,
-    mevcutSurum: mevcut.surum,
-    yeniSurum,
-    notlar,
-    yontem: gitVarMi(kok) ? 'git' : 'github',
-    commit: commit || undefined
-  };
+  try {
+    const remotePkg = await githubDosyaOku(repoUrl, branch, 'package.json');
+    if (!remotePkg) return null;
+    const yeniSurum = String(remotePkg.version || '').trim();
+    let notlar = '';
+    try {
+      const surum = await githubDosyaOku(repoUrl, branch, 'surum.json');
+      notlar = surum?.notlar || '';
+    } catch (_) {}
+    return {
+      guncellemeVar: Boolean(yeniSurum && surumKarsilastir(yeniSurum, mevcut.surum) > 0),
+      mevcutSurum: mevcut.surum,
+      yeniSurum,
+      notlar,
+      yontem: 'github'
+    };
+  } catch (_) {
+    return null;
+  }
 }
 
 function envGitAyarla(kok, repoUrl, branch) {
@@ -289,7 +268,7 @@ async function githubZipGuncelle(kok, koruFn) {
   }
 }
 
-async function gitPullUygula(kok, koruFn) {
+function gitPullUygula(kok, koruFn) {
   if (!gitKuruluMu()) {
     throw new Error('Git kurulu degil — githubZipGuncelle kullanin');
   }
@@ -324,20 +303,6 @@ async function gitPullUygula(kok, koruFn) {
     const local = gitCalistir('git rev-parse HEAD', kok);
     const remote = gitCalistir(`git rev-parse origin/${branch}`, kok);
     if (local === remote) {
-      const mevcut = mevcutSurumAl(kok);
-      const repoUrl = repoUrlAl(kok);
-      if (repoUrl) {
-        try {
-          const remotePkg = await githubDosyaOku(repoUrl, branch, 'package.json');
-          const uzakSurum = String(remotePkg?.version || '').trim();
-          if (uzakSurum && surumKarsilastir(uzakSurum, mevcut.surum) > 0) {
-            console.log('Git esit ama surum eski — dosyalar zorla guncelleniyor...');
-            gitCalistir(`git reset --hard origin/${branch}`, kok, true);
-            if (typeof koruFn === 'function') koruFn('geri');
-            return { guncellendi: true, yontem: 'reset' };
-          }
-        } catch (_) {}
-      }
       if (typeof koruFn === 'function') koruFn('geri');
       return { guncellendi: false };
     }

@@ -193,13 +193,12 @@ async function zipGuncelle(mevcut) {
     const kontrol = await gitUzakSurumKontrol(KOK);
     if (kontrol && !kontrol.guncellemeVar) {
       console.log('');
-      console.log('GitHub surumu:', kontrol.yeniSurum || '(okunamadi)', '| Kurulu:', mevcut.surum);
       console.log('Zaten guncel (Git).');
       durumBitir(KOK, true, 'Zaten güncel', mevcut.surum, 'guncelleme');
       process.exit(0);
     }
     if (kontrol?.yeniSurum) {
-      console.log('Yeni surum (Git):', kontrol.yeniSurum, '| Kurulu:', mevcut.surum);
+      console.log('Yeni surum (Git):', kontrol.yeniSurum);
       if (kontrol.notlar) console.log('Notlar:', kontrol.notlar);
     }
     console.log('');
@@ -207,7 +206,7 @@ async function zipGuncelle(mevcut) {
     durumGuncelle(KOK, 30, 'Güncelleme indiriliyor…', 'indir', 'guncelleme');
     let sonuc;
     if (gitKuruluMu()) {
-      sonuc = await gitPullUygula(KOK, koruIslem);
+      sonuc = gitPullUygula(KOK, koruIslem);
     } else {
       sonuc = await githubZipGuncelle(KOK, koruIslem);
     }

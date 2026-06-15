@@ -5759,17 +5759,12 @@ async function belgenetLovListedenSec(frame, aramaParcalari) {
                 'li.ui-autocomplete-item, .ui-autocomplete-item, .lovItemTitle, .lovItemDetail, ' +
                 '.ui-selectonemenu-items li, .ui-datalist-item, tr.ui-widget-content, .ui-lov-table tr'
             ));
-            for (const parca of kok.querySelectorAll('.lovItemTitle, .lovItemDetail')) {
-                const satir = parca.closest('li.ui-autocomplete-item, tr, li, div.ui-autocomplete-item');
-                if (satir && gorunur(satir)) elms.push(satir);
-            }
         }
-        const esles = (el) => {
+        const h = elms.find((el) => {
+            if (!gorunur(el)) return false;
             const txt = (el.innerText || el.textContent || '').toLocaleUpperCase('tr-TR');
-            if (ps.length > 1 && ps.every((p) => txt.includes(p))) return true;
             return ps.some((p) => txt.includes(p));
-        };
-        const h = elms.find((el) => gorunur(el) && esles(el));
+        });
         if (!h) return false;
         const tikla = h.closest('li.ui-autocomplete-item, tr, li') || h;
         tikla.scrollIntoView({ block: 'center' });
@@ -5887,148 +5882,6 @@ async function belgenetKonuInputIdBul(frame) {
         const inp = document.querySelector('textarea[id*="konu"], input[id*="konu"]:not([id*="konuKodu"]):not([id*="standartDosyaPlani"])');
         return inp?.id || null;
     });
-}
-
-/** Belgenet "Konu Kodu" kutusunun id'sini bul (240.02 standart dosya planı) */
-async function belgenetKonuKoduInputIdBul(frame) {
-    return frame.evaluate(() => {
-        const kullanilabilir = (el) => {
-            if (!el || el.type === 'hidden' || el.disabled) return false;
-            const r = el.getBoundingClientRect();
-            return r.width > 0 && r.height > 0;
-        };
-        for (const sel of [
-            'input[id*="konuKodu_input"]',
-            'input[id*="konuKodu"]',
-            'input[id*="standartDosyaPlani"]',
-            'input[id*="StandartDosyaPlani"]'
-        ]) {
-            const el = document.querySelector(sel);
-            if (kullanilabilir(el) && el.id) return el.id;
-        }
-        const etiketler = Array.from(document.querySelectorAll('label, td, span, th'));
-        const etiket = etiketler.find((l) => {
-            const t = (l.innerText || l.textContent || '').trim().replace(/\s*\*+\s*$/, '').trim();
-            return t === 'Konu Kodu';
-        });
-        if (etiket) {
-            const forId = etiket.getAttribute('for');
-            if (forId) {
-                const el = document.getElementById(forId);
-                if (kullanilabilir(el)) return forId;
-            }
-            const satir = etiket.closest('tr') || etiket.parentElement?.parentElement;
-            const input = satir?.querySelector('input[type="text"]');
-            if (kullanilabilir(input) && input.id) return input.id;
-        }
-        return null;
-    });
-}
-
-/** Açılan Konu Kodu listesinden 240.02 / Çiftçi Kayıt Sistemi satırını seç */
-async function belgenetKonuKoduListedenSec(frame) {
-    const kod = BELGENET_KONU_KODU;
-    const yil = String(new Date().getFullYear());
-    const aramaDenemeleri = [
-        [kod, 'Çiftçi Kayıt Sistemi Başvuru'],
-        [kod, 'Çiftçi Kayıt Sistemi'],
-        [yil, kod, 'Başvuru'],
-        [kod]
-    ];
-    for (const parcalar of aramaDenemeleri) {
-        if (await belgenetLovListedenSec(frame, parcalar)) return true;
-    }
-    return frame.evaluate((k) => {
-        const gorunur = (el) => {
-            if (!el) return false;
-            const st = getComputedStyle(el);
-            const r = el.getBoundingClientRect();
-            return st.display !== 'none' && st.visibility !== 'hidden' && r.width > 8 && r.height > 8;
-        };
-        const adaylar = [];
-        for (const p of document.querySelectorAll('.ui-autocomplete-panel, .ui-autocomplete-items, .ui-lov-panel, .ui-dialog')) {
-            if (!gorunur(p)) continue;
-            adaylar.push(...p.querySelectorAll('li.ui-autocomplete-item, tr.ui-widget-content, .ui-lov-table tr'));
-        }
-        const hedef = adaylar.find((el) => {
-            if (!gorunur(el)) return false;
-            const txt = (el.innerText || el.textContent || '').toLocaleUpperCase('tr-TR');
-            return txt.includes(k.toLocaleUpperCase('tr-TR')) &&
-                (txt.includes('ÇIFTÇI') || txt.includes('CIFTCI')) &&
-                txt.includes('KAYIT');
-        }) || adaylar.find((el) => gorunur(el) && (el.innerText || '').includes(k));
-        if (!hedef) return false;
-        const tikla = hedef.closest('li.ui-autocomplete-item, tr, li') || hedef;
-        tikla.scrollIntoView({ block: 'center' });
-        tikla.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-        tikla.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-        tikla.click();
-        tikla.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
-        return true;
-    }, kod);
-}
-
-/** Konu Kodu alanına BELGENET_KONU_KODU (240.02) yazar ve listeden seçer */
-async function belgenetKonuKoduDoldur(page, targetFrame) {
-    const kod = BELGENET_KONU_KODU;
-    console.log(`📋 Konu Kodu (${kod}) giriliyor...`);
-
-    let inputId = null;
-    for (let deneme = 1; deneme <= 5; deneme++) {
-        inputId = await belgenetKonuKoduInputIdBul(targetFrame);
-        if (inputId) break;
-        await belgenetBekle(1000);
-    }
-    if (!inputId) {
-        console.log('❌ Konu Kodu kutusu bulunamadı!');
-        return false;
-    }
-
-    await alanTemizleVeYaz(page, targetFrame, inputId, kod);
-    await targetFrame.evaluate((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown' }));
-        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'ArrowDown' }));
-    }, inputId);
-
-    console.log('⏳ Konu Kodu listesi bekleniyor...');
-    let konuTiklandiMi = false;
-    for (let deneme = 1; deneme <= 6; deneme++) {
-        await belgenetBekle(deneme === 1 ? 2500 : 1000);
-        if (await belgenetKonuKoduListedenSec(targetFrame)) {
-            konuTiklandiMi = true;
-            console.log(`✅ Konu Kodu listeden seçildi (${deneme}. deneme)`);
-            break;
-        }
-    }
-
-    if (!konuTiklandiMi) {
-        console.log('⚠️ Konu menüsü tıklanamadı, B Planı (Klavye) devreye giriyor...');
-        try {
-            await targetFrame.focus(`[id="${inputId}"]`);
-        } catch (_) { /* yoksay */ }
-        await page.keyboard.press('ArrowDown');
-        await belgenetBekle(700);
-        await page.keyboard.press('Enter');
-    }
-    await belgenetBekle(1500);
-
-    const dogruMu = await targetFrame.evaluate((id, k) => {
-        const el = document.getElementById(id);
-        const v = (el?.value || '').trim();
-        return v.includes(k);
-    }, inputId, kod);
-
-    if (!dogruMu) {
-        console.log('⚠️ Konu Kodu doğrulanamadı, klavye ile tekrar deneniyor...');
-        await targetFrame.focus(`[id="${inputId}"]`);
-        await page.keyboard.press('ArrowDown');
-        await belgenetBekle(500);
-        await page.keyboard.press('Enter');
-        await belgenetBekle(1000);
-    }
-    return true;
 }
 
 async function belgenetHavaleInputIdBul(frame) {
@@ -7013,9 +6866,45 @@ app.post('/api/belgenet-yukle', async (req, res) => {
         await belgenetBekle(1000);
 
         // =========================================================
-        // 🎯 KONU KODU (240.02)
+        // 🎯 KONU KODU (240.02) - GÜVENLİ VE YEDEK PLANLI
         // =========================================================
-        await belgenetKonuKoduDoldur(page, targetFrame);
+        console.log(`📋 Konu Kodu (${BELGENET_KONU_KODU}) giriliyor...`);
+        const konuKoduKutuId = await targetFrame.evaluate(() => {
+            const inputs = Array.from(document.querySelectorAll('input[type="text"]'));
+            const input = inputs.find(el => el.id && (el.id.includes('konuKodu') || el.id.includes('standartDosyaPlani') || el.id.includes('kod')));
+            if(input) { input.value = ''; return input.id; }
+            return null;
+        });
+
+        if (konuKoduKutuId) {
+            await targetFrame.focus(`[id="${konuKoduKutuId}"]`);
+            await belgenetBekle(500);
+            await page.keyboard.type(BELGENET_KONU_KODU, { delay: 280 }); 
+            
+            console.log("⏳ Konu Kodu listesi bekleniyor (3 sn)...");
+            await belgenetBekle(3000); 
+            
+            const konuTiklandiMi = await targetFrame.evaluate((kod) => {
+                const basliklar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
+                const hedef = basliklar.find(el => {
+                    const t = el.innerText || '';
+                    return el.offsetParent !== null && (t.includes(kod) || t.includes('Çiftçi Kayıt Sistemi'));
+                });
+                if (hedef) {
+                    hedef.click();
+                    return true; 
+                }
+                return false; 
+            }, BELGENET_KONU_KODU);
+
+            if (!konuTiklandiMi) {
+                console.log("⚠️ Konu menüsü tıklanamadı, B Planı (Klavye) devreye giriyor...");
+                await page.keyboard.press('ArrowDown');
+                await belgenetBekle(700);
+                await page.keyboard.press('Enter');
+            }
+        }
+        await belgenetBekle(1500);
 
         // ✍️ KONU METNİ
         await belgenetBekle(800);
@@ -7911,7 +7800,25 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
         await belgenetBekle(1000);
 
         // 📋 KONU KODU (240.02)
-        await belgenetKonuKoduDoldur(page, targetFrame);
+        const konuKoduKutuId = await targetFrame.evaluate(() => {
+            const inputs = Array.from(document.querySelectorAll('input[type="text"]'));
+            const input = inputs.find(el => el.id && (el.id.includes('konuKodu') || el.id.includes('standartDosyaPlani')));
+            if(input) { input.value = ''; return input.id; } return null;
+        });
+        if (konuKoduKutuId) {
+            await targetFrame.focus(`[id="${konuKoduKutuId}"]`); await belgenetBekle(500);
+            await page.keyboard.type(BELGENET_KONU_KODU, { delay: 280 }); await belgenetBekle(3000); 
+            const sec = await targetFrame.evaluate((kod) => {
+                const basliklar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
+                const h = basliklar.find(el => {
+                    const t = el.innerText || '';
+                    return el.offsetParent !== null && (t.includes(kod) || t.includes('Çiftçi Kayıt Sistemi'));
+                });
+                if (h) { h.click(); return true; } return false; 
+            }, BELGENET_KONU_KODU);
+            if (!sec) { await page.keyboard.press('ArrowDown'); await belgenetBekle(700); await page.keyboard.press('Enter'); }
+        }
+        await belgenetBekle(1500);
 
         // ✍️ KONU METNİ
         await belgenetBekle(800);

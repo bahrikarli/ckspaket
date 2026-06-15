@@ -1,0 +1,42 @@
+{
+  "name": "ckspaket",
+  "version": "1.0.11",
+  "description": "CKS Paket — Personel, Çiftçi Kayıt, Mesajlar, Arşiv (Odalar + ÇKS Dosyaları)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.13.4",
+    "bcrypt": "^6.0.0",
+    "bwip-js": "^4.8.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "fs-extra": "^11.3.4",
+    "ip": "^2.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mssql": "^12.1.1",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.2",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.18.0",
+    "pdfkit-table": "^0.1.99",
+    "puppeteer": "^24.40.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

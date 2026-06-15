@@ -14,10 +14,37 @@ function paketSurumAl(kok) {
   }
 }
 
+/** iframe/modal sayfalari — server.js senkronundan ONCE kayit (Bearer GET tasimaz) */
+const HTML_IFRAME_SAYFALAR = [
+  'cks.html',
+  'mesajlar.html',
+  'profil.html',
+  'personel-pdf-havuz.html',
+  'dashboard.html',
+  'arsiv.html',
+  'dilekce.html',
+  'mesai-kart.html',
+  'mesai-yoklama.html',
+  'mesai-takip.html',
+  'mesai-zobis-hatirlatma-test.html'
+];
+
+function registerCkspaketHtmlSayfalari(app, gercekKlasor) {
+  for (const dosya of HTML_IFRAME_SAYFALAR) {
+    const webYol = '/' + dosya;
+    app.get(webYol, (req, res) => {
+      const tam = path.join(gercekKlasor, dosya);
+      if (!fs.existsSync(tam)) return res.status(404).send(dosya + ' bulunamadi');
+      res.sendFile(tam);
+    });
+  }
+}
+
 function registerCkspaketSunucu(app, opts) {
   const { getPool, gercekKlasor, CKSPAKET_MOD, authenticateToken, sadeceAdmin } = opts;
   if (!CKSPAKET_MOD || !app) return;
 
+  registerCkspaketHtmlSayfalari(app, gercekKlasor);
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, ckspaket: true, pid: process.pid });
   });

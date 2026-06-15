@@ -282,13 +282,13 @@ try {
 } catch (e) { console.warn('[ckspaket-sunucu]', e.message); }
 
 // TÜM SAYFALAR
-app.get('/dashboard.html', authenticateToken, sadeceAdmin, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
-app.get('/mesajlar.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesajlar.html')));
-app.get('/profil.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'profil.html')));
-app.get('/personel-pdf-havuz.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'personel-pdf-havuz.html')));
-app.get('/cks.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'cks.html')));
-app.get('/mesai-kart.html', authenticateToken, sadeceAdminSayfa, (req, res) => {
-  const dosya = path.join(__dirname, 'mesai-kart.html');
+app.get('/dashboard.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'dashboard.html')));
+app.get('/mesajlar.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'mesajlar.html')));
+app.get('/profil.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'profil.html')));
+app.get('/personel-pdf-havuz.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'personel-pdf-havuz.html')));
+app.get('/cks.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'cks.html')));
+app.get('/mesai-kart.html', (req, res) => {
+  const dosya = path.join(gercekKlasor, 'mesai-kart.html');
   res.sendFile(dosya, (err) => {
     if (err) {
       console.error('mesai-kart.html:', err.message);
@@ -296,10 +296,10 @@ app.get('/mesai-kart.html', authenticateToken, sadeceAdminSayfa, (req, res) => {
     }
   });
 });
-app.get('/mesai-yoklama.html', authenticateToken, sadeceAdminSayfa, (req, res) => res.sendFile(path.join(__dirname, 'mesai-yoklama.html')));
-app.get('/mesai-takip.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesai-takip.html')));
-app.get('/mesai-zobis-hatirlatma-test.html', authenticateToken, sadeceAdminSayfa, (req, res) =>
-  res.sendFile(path.join(__dirname, 'mesai-zobis-hatirlatma-test.html'))
+app.get('/mesai-yoklama.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'mesai-yoklama.html')));
+app.get('/mesai-takip.html', (req, res) => res.sendFile(path.join(gercekKlasor, 'mesai-takip.html')));
+app.get('/mesai-zobis-hatirlatma-test.html', (req, res) =>
+  res.sendFile(path.join(gercekKlasor, 'mesai-zobis-hatirlatma-test.html'))
 );
 
 // Tarım Rehberi (TMO, hava, zirai mücadele) — erken kayıt
@@ -8935,11 +8935,11 @@ async function siraDbHazirla() {
 }
 
 app.get('/siramatik.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'siramatik.html'));
+  res.sendFile(path.join(gercekKlasor, 'siramatik.html'));
 });
 
 app.get('/kiosk.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'kiosk.html'));
+  res.sendFile(path.join(gercekKlasor, 'kiosk.html'));
 });
 
 async function siraKayitEkle({ tc, adSoyad, kaynak, personel }) {
@@ -9693,7 +9693,7 @@ async function mesaiKullaniciSifreDogrula(userId, sifre) {
 }
 
 app.get('/mesai.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'mesai.html'));
+  res.sendFile(path.join(gercekKlasor, 'mesai.html'));
 });
 
 app.post('/api/mesai/kart', async (req, res) => {

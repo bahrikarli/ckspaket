@@ -283,6 +283,28 @@ try {
     );
   }
 
+  // HTML GET — iframe/modal Authorization header tasimaz; oturum istemcide
+  s = s.replace(
+    /app\.get\('(\/[^']+\.html)', authenticateToken, sadeceAdminSayfa, /g,
+    "app.get('$1', "
+  );
+  s = s.replace(
+    /app\.get\('(\/[^']+\.html)', authenticateToken, sadeceAdmin, /g,
+    "app.get('$1', "
+  );
+  s = s.replace(
+    /app\.get\('(\/[^']+\.html)', authenticateToken, /g,
+    "app.get('$1', "
+  );
+  s = s.replace(
+    /res\.sendFile\(path\.join\(__dirname, '([^']+\.html)'\)\)/g,
+    "res.sendFile(path.join(gercekKlasor, '$1'))"
+  );
+  s = s.replace(
+    /const dosya = path\.join\(__dirname, '([^']+\.html)'\)/g,
+    "const dosya = path.join(gercekKlasor, '$1')"
+  );
+
   yaz(p, s);
   console.log('  OK: server.js paket yamalari');
 }

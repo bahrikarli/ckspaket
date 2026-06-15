@@ -6,8 +6,17 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const axios = require('axios');
-const { surumKarsilastir, mevcutSurumAl } = require('./paket-guncelleme');
-const { gitGuncellemeAktifMi, gitPullUygula, gitUzakSurumKontrol, gitKuruluMu, githubZipGuncelle } = require('./git-guncelleme');
+const { surumKarsilastir, mevcutSurumAl, guncellemeYontemiAl, yerelManifestOku, manifestZipDosya } = require('./paket-guncelleme');
+const durumNoop = { durumBaslat: () => {}, durumGuncelle: () => {}, durumBitir: () => {} };
+let durumBaslat;
+let durumGuncelle;
+let durumBitir;
+try {
+  ({ durumBaslat, durumGuncelle, durumBitir } = require('./guncelleme-durum'));
+} catch (_) {
+  ({ durumBaslat, durumGuncelle, durumBitir } = durumNoop);
+}
+const { gitPullUygula, gitUzakSurumKontrol, gitKuruluMu, githubZipGuncelle } = require('./git-guncelleme');
 const { koruMu } = require('./guncelleme-koru');
 const { zipAc, kaynakTemizle, zipKaynakBul } = require('./guncelleme-zip');
 
@@ -42,20 +51,66 @@ function koruIslem(islem) {
   else if (islem === 'geri') yedekGeri();
 }
 
-async function manifestAl() {
-  const url = String(process.env.GUNCELLEME_URL || '').trim();
-  if (!url) throw new Error('GUNCELLEME_URL .env dosyasinda tanimli degil');
-  const res = await axios.get(url, { timeout: 30000, validateStatus: (s) => s === 200 });
-  return res.data;
+function yerelManifestOkuYerel() {
+  return yerelManifestOku(KOK);
 }
 
-async function zipIndir(url, hedef) {
-  const res = await axios.get(url, {
+async function manifestAl() {
+  const yerel = yerelManifestOkuYerel();
+  if (yerel) {
+    console.log('Yerel guncellemeler/guncelleme.json kullaniliyor...');
+    return yerel;
+  }
+  const url = String(process.env.GUNCELLEME_URL || '').trim();
+  if (url) {
+    const res = await axios.get(url, { timeout: 20000, validateStatus: (s) => s === 200 });
+    return res.data;
+  }
+  throw new Error(
+    'guncellemeler/guncelleme.json yok.\n\n' +
+      'Gelistiriciden surum paketini alin (ZIP + guncelleme.json),\n' +
+      'C:\\ckspaket\\guncellemeler\\ klasorune kopyalayin, tekrar calistirin.'
+  );
+}
+
+async function zipAl(urlOrDosya, hedef) {
+  const ad = manifestZipDosya({ zipDosya: urlOrDosya, indirmeUrl: urlOrDosya });
+  const yerelZip = path.join(KOK, 'guncellemeler', ad);
+  fs.mkdirSync(path.dirname(hedef), { recursive: true });
+
+  if (fs.existsSync(yerelZip)) {
+    console.log('Yerel ZIP kullaniliyor:', yerelZip);
+    fs.copyFileSync(yerelZip, hedef);
+    return;
+  }
+
+  if (!/^https?:\/\//i.test(String(urlOrDosya))) {
+    throw new Error(
+      `ZIP bulunamadi: guncellemeler\\${ad}\n` +
+        'Gelistiriciden gelen .zip dosyasini ayni klasore kopyalayin.'
+    );
+  }
+
+  let duzUrl = urlOrDosya;
+  const kaynakUrl = String(process.env.GUNCELLEME_URL || '').trim();
+  if (kaynakUrl) {
+    try {
+      const kaynak = new URL(kaynakUrl);
+      const hedefUrl = new URL(duzUrl);
+      if (hedefUrl.hostname === '127.0.0.1' || hedefUrl.hostname === 'localhost') {
+        hedefUrl.hostname = kaynak.hostname;
+        if (kaynak.port) hedefUrl.port = kaynak.port;
+        duzUrl = hedefUrl.toString();
+      }
+    } catch (_) {}
+  }
+
+  console.log('Indiriliyor:', duzUrl);
+  const res = await axios.get(duzUrl, {
     responseType: 'arraybuffer',
     timeout: 120000,
     validateStatus: (s) => s === 200
   });
-  fs.mkdirSync(path.dirname(hedef), { recursive: true });
   fs.writeFileSync(hedef, Buffer.from(res.data));
 }
 
@@ -81,8 +136,8 @@ function dosyalariUygula(kaynak, hedef) {
 async function zipGuncelle(mevcut) {
   const manifest = await manifestAl();
   const yeniSurum = String(manifest.surum || manifest.version || '').trim();
-  const indirmeUrl = String(manifest.indirmeUrl || manifest.downloadUrl || '').trim();
-  if (!yeniSurum || !indirmeUrl) throw new Error('Manifest eksik: surum veya indirmeUrl yok');
+  const zipKaynak = manifestZipDosya(manifest);
+  if (!yeniSurum || !zipKaynak) throw new Error('Manifest eksik: surum veya zipDosya yok');
   if (surumKarsilastir(yeniSurum, mevcut.surum) <= 0) return false;
 
   console.log('Yeni surum (ZIP):', yeniSurum);
@@ -90,12 +145,14 @@ async function zipGuncelle(mevcut) {
 
   const tmpZip = path.join(KOK, 'guncellemeler', '_indirilen.zip');
   const tmpAc = path.join(KOK, 'guncellemeler', '_acilan');
-  console.log('Indiriliyor...');
-  await zipIndir(indirmeUrl, tmpZip);
+  durumGuncelle(KOK, 35, `v${yeniSurum} paketi hazirlaniyor…`, 'indir', 'guncelleme');
+  await zipAl(zipKaynak, tmpZip);
   yedekAl();
   try {
+    durumGuncelle(KOK, 50, 'Paket açılıyor…', 'ac', 'guncelleme');
     if (fs.existsSync(tmpAc)) fs.rmSync(tmpAc, { recursive: true, force: true });
     zipAc(tmpZip, tmpAc);
+    durumGuncelle(KOK, 60, 'Dosyalar kopyalanıyor…', 'kopyala', 'guncelleme');
     const kaynakKok = zipKaynakBul(tmpAc);
     dosyalariUygula(kaynakKok, KOK);
     yedekGeri();
@@ -114,17 +171,30 @@ async function zipGuncelle(mevcut) {
   console.log('Klasor:', KOK);
   console.log('');
 
+  durumBaslat(KOK, 'guncelleme', 'Güncelleme kontrol ediliyor…');
+  durumGuncelle(KOK, 8, 'Mevcut sürüm okunuyor…', 'kontrol', 'guncelleme');
+
   const mevcut = mevcutSurumAl(KOK);
   console.log('Mevcut surum:', mevcut.surum);
 
+  const yontem = guncellemeYontemiAl(KOK);
+  if (!yontem) {
+    throw new Error(
+      'GIT_REPO_URL .env dosyasinda tanimli degil.\n' +
+        'Musteri kurulumunda .env icinde Git adresi olmali.'
+    );
+  }
+
   let guncellendi = false;
 
-  if (gitGuncellemeAktifMi(KOK)) {
-    console.log('Yontem: Git');
+  if (yontem === 'git') {
+    console.log('Yontem: Git (otomatik — .env ve taramalar korunur)');
+    durumGuncelle(KOK, 15, 'Git deposu kontrol ediliyor…', 'git', 'guncelleme');
     const kontrol = await gitUzakSurumKontrol(KOK);
     if (kontrol && !kontrol.guncellemeVar) {
       console.log('');
       console.log('Zaten guncel (Git).');
+      durumBitir(KOK, true, 'Zaten güncel', mevcut.surum, 'guncelleme');
       process.exit(0);
     }
     if (kontrol?.yeniSurum) {
@@ -133,6 +203,7 @@ async function zipGuncelle(mevcut) {
     }
     console.log('');
     console.log('Guncelleme indiriliyor...');
+    durumGuncelle(KOK, 30, 'Güncelleme indiriliyor…', 'indir', 'guncelleme');
     let sonuc;
     if (gitKuruluMu()) {
       sonuc = gitPullUygula(KOK, koruIslem);
@@ -143,29 +214,40 @@ async function zipGuncelle(mevcut) {
     if (!guncellendi) {
       console.log('');
       console.log('Zaten guncel (Git).');
+      durumBitir(KOK, true, 'Zaten güncel', mevcut.surum, 'guncelleme');
       process.exit(0);
     }
-  } else {
-    console.log('Yontem: ZIP');
+    durumGuncelle(KOK, 65, 'Dosyalar uygulandı', 'uygula', 'guncelleme');
+  } else if (yontem === 'yerel' || yontem === 'uzak') {
+    console.log(yontem === 'yerel' ? 'Yontem: Yerel paket (guncellemeler/)' : 'Yontem: Uzak ZIP');
+    durumGuncelle(KOK, 20, 'Güncelleme manifesti okunuyor…', 'manifest', 'guncelleme');
     guncellendi = await zipGuncelle(mevcut);
     if (!guncellendi) {
       console.log('');
-      console.log('Zaten guncel (ZIP).');
+      console.log('Zaten guncel.');
+      durumBitir(KOK, true, 'Zaten güncel', mevcut.surum, 'guncelleme');
       process.exit(0);
     }
+    durumGuncelle(KOK, 70, 'Paket uygulandı', 'uygula', 'guncelleme');
   }
 
   console.log('');
   console.log('npm install calistiriliyor...');
+  durumGuncelle(KOK, 80, 'Bağımlılıklar kuruluyor (npm install)…', 'npm', 'guncelleme');
   execSync('npm install --omit=dev --no-audit', { cwd: KOK, stdio: 'inherit' });
 
   const guncel = mevcutSurumAl(KOK);
   console.log('');
   console.log('Guncelleme tamamlandi. Surum:', guncel.surum);
+  durumGuncelle(KOK, 92, 'Sunucu yeniden başlatılıyor…', 'yeniden-baslat', 'guncelleme');
+  durumBitir(KOK, true, `Güncelleme tamamlandı — v${guncel.surum}`, guncel.surum, 'guncelleme');
   process.exit(0);
 })().catch((err) => {
   console.error('');
   console.error('GUNCELLEME BASARISIZ:', err.message);
+  try {
+    durumBitir(KOK, false, err.message, null, 'guncelleme');
+  } catch (_) {}
   process.exit(1);
 });
 

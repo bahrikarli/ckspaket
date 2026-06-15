@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bilgilerimi Güncelle</title>
+<style>
+  body {font-family:Segoe UI,sans-serif; background:#f4f6f9; margin:0; padding:20px; color:#333;}
+  .kutu {max-width:500px; margin:40px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+  h2 {text-align:center; color:#006400;}
+  input, button {width:100%; padding:12px; margin:10px 0; border-radius:8px; border:1px solid #ddd; font-size:16px;}
+  button {background:#006400; color:white; border:none; cursor:pointer; font-weight:bold;}
+  button:hover {background:#005000;}
+  .msg {padding:12px; margin:15px 0; border-radius:8px; text-align:center; font-weight:bold;}
+  .basarili {background:#d4edda; color:#155724;}
+  .hata {background:#f8d7da; color:#721c24;}
+</style>
+</head>
+<body>
+<div class="kutu">
+  <h2>BİLGİLERİMİ GÜNCELLE</h2>
+  <div id="msg"></div>
+  <input type="text" id="ad" placeholder="Ad">
+  <input type="text" id="soyad" placeholder="Soyad">
+  <input type="email" id="email" placeholder="E-posta">
+  <input type="password" id="sifre" placeholder="Yeni Şifre (boş bırak = değişmez)">
+  <button onclick="guncelle()">GÜNCELLE</button>
+  <br><br>
+  <button onclick="location.href='anasayfa.html'" style="background:#666;">Ana Sayfaya Dön</button>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+
+// BU SATIRI DEĞİŞTİRDİM – SENİN SİSTEMİN BÜYÜK İHTİMALLE BÖYLE İSTİYOR
+const PROFIL_URL = '/api/profil-guncelle';  // <-- BURAYI DEĞİŞTİRDİM (çoğu sistemde bu isim kullanılır)
+
+async function guncelle() {
+  const body = {};
+  const ad = document.getElementById('ad').value.trim(); 
+  if(ad) body.ad = ad;
+  const soyad = document.getElementById('soyad').value.trim(); 
+  if(soyad) body.soyad = soyad;
+  const email = document.getElementById('email').value.trim(); 
+  if(email) body.email = email;
+  const sifre = document.getElementById('sifre').value; 
+  if(sifre) body.sifre = sifre;
+
+  if (Object.keys(body).length === 0) return mesajGoster("Hiç değişiklik yapmadınız!", "hata");
+
+  const res = await fetch(PROFIL_URL, {  // <-- BURADA DEĞİŞTİ
+    method: 'POST',  // <-- PUT yerine POST yaptım (çoğu sistem POST ister)
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  
+  if (data.success) {
+    mesajGoster("Başarıyla güncellendi!", "basarili");
+    setTimeout(() => location.href = 'anasayfa.html', 1500);
+  } else {
+    mesajGoster(data.message || "Bir hata oluştu!", "hata");
+  }
+}
+
+function mesajGoster(m, t) {
+  const d = document.getElementById('msg');
+  d.textContent = m;
+  d.className = 'msg ' + t;
+}
+
+// Mevcut bilgileri yükle
+fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
+  .then(r => r.json())
+  .then(d => {
+    if (d.success && d.user) {
+      document.getElementById('ad').value = d.user.ad || '';
+      document.getElementById('soyad').value = d.user.soyad || '';
+      document.getElementById('email').value = d.user.email || '';
+    }
+  });
+</script>
+</body>
+</html>

@@ -3,6 +3,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { spawn } = require('child_process');
 const axios = require('axios');
 
@@ -68,16 +69,31 @@ function surumSenkronYaz(kok, surum, notlar) {
   return surum;
 }
 
+function lanIpBul() {
+  const tercih = String(process.env.CKS_SUNUCU_IP || process.env.CKS_BIND_HOST || '').trim();
+  const ipv4ler = [];
+  for (const addrs of Object.values(os.networkInterfaces())) {
+    for (const a of addrs) {
+      if (a.family === 'IPv4' && !a.internal) ipv4ler.push(a.address);
+    }
+  }
+  if (tercih && tercih !== '0.0.0.0' && tercih !== '127.0.0.1' && ipv4ler.includes(tercih)) {
+    return tercih;
+  }
+  if (tercih && tercih !== '0.0.0.0' && tercih !== '127.0.0.1') return tercih;
+  const lan = ipv4ler.find((ip) => ip.startsWith('192.168.')) || ipv4ler.find((ip) => ip.startsWith('10.'));
+  return lan || '127.0.0.1';
+}
+
 function manifestYaz(kok, surum, zipAdi, ip, port, notlar) {
   const guncellemeKlasor = path.join(kok, 'guncellemeler');
   fs.mkdirSync(guncellemeKlasor, { recursive: true });
-  const sunucuIp = ip || process.env.CKS_SUNUCU_IP || '127.0.0.1';
-  const sunucuPort = port || process.env.CKS_PORT || process.env.PORT || '3030';
   const manifest = {
     surum,
     tarih: new Date().toISOString().slice(0, 10),
     notlar: notlar || `${surum} sürüm güncellemesi`,
-    indirmeUrl: `http://${sunucuIp}:${sunucuPort}/guncellemeler/${zipAdi}`
+    zipDosya: zipAdi,
+    indirmeUrl: zipAdi
   };
   fs.writeFileSync(path.join(guncellemeKlasor, 'guncelleme.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   return manifest;
@@ -106,9 +122,107 @@ async function uzakManifestAl(url) {
   return res.data;
 }
 
+/** Müşteride guncellemeler/guncelleme.json varsa yerel paket */
+function yerelManifestOku(kok) {
+  try {
+    const p = path.join(kok, 'guncellemeler', 'guncelleme.json');
+    if (!fs.existsSync(p)) return null;
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+function manifestZipDosya(manifest) {
+  const ad = String(manifest?.zipDosya || manifest?.indirmeUrl || manifest?.downloadUrl || '').trim();
+  if (!ad) return '';
+  try {
+    return path.basename(new URL(ad).pathname);
+  } catch (_) {
+    return path.basename(ad.replace(/\\/g, '/'));
+  }
+}
+
+function yerelGuncellemeKontrol(gercekKlasor) {
+  const manifest = yerelManifestOku(gercekKlasor);
+  if (!manifest) return null;
+  const mevcut = mevcutSurumAl(gercekKlasor);
+  const yeniSurum = String(manifest.surum || manifest.version || '').trim();
+  const zipDosya = manifestZipDosya(manifest);
+  const guncellemeVar = Boolean(yeniSurum && surumKarsilastir(yeniSurum, mevcut.surum) > 0);
+  let mesaj = '';
+  if (guncellemeVar && zipDosya) {
+    const zipYol = path.join(gercekKlasor, 'guncellemeler', zipDosya);
+    if (!fs.existsSync(zipYol)) {
+      return {
+        guncellemeVar: false,
+        mevcutSurum: mevcut.surum,
+        yeniSurum,
+        mesaj: `${zipDosya} dosyasi guncellemeler klasorunde yok — USB ile kopyalayin`,
+        yontem: 'yerel'
+      };
+    }
+  }
+  return {
+    guncellemeVar,
+    mevcutSurum: mevcut.surum,
+    yeniSurum,
+    tarih: manifest.tarih || manifest.releaseDate || '',
+    notlar: manifest.notlar || manifest.notes || manifest.changelog || '',
+    zipDosya,
+    yontem: 'yerel',
+    mesaj
+  };
+}
+
+/** Uzak URL ile ZIP (isteğe bağlı — aynı ağ vb.) */
+function zipGuncellemeAktifMi() {
+  return Boolean(String(process.env.GUNCELLEME_URL || '').trim());
+}
+
+/** Git → yerel paket → uzak URL */
+function guncellemeYontemiAl(kok) {
+  if (require('./git-guncelleme').gitGuncellemeAktifMi(kok)) return 'git';
+  if (yerelManifestOku(kok)) return 'yerel';
+  if (zipGuncellemeAktifMi()) return 'uzak';
+  return null;
+}
+
+async function zipManifestKontrol(gercekKlasor) {
+  const manifestUrl = String(process.env.GUNCELLEME_URL || '').trim();
+  if (!manifestUrl) return null;
+  const mevcut = mevcutSurumAl(gercekKlasor);
+  const manifest = await uzakManifestAl(manifestUrl);
+  const yeniSurum = String(manifest.surum || manifest.version || '').trim();
+  const guncellemeVar = Boolean(yeniSurum && surumKarsilastir(yeniSurum, mevcut.surum) > 0);
+  return {
+    guncellemeVar,
+    mevcutSurum: mevcut.surum,
+    yeniSurum,
+    tarih: manifest.tarih || manifest.releaseDate || '',
+    notlar: manifest.notlar || manifest.notes || manifest.changelog || '',
+    indirmeUrl: manifest.indirmeUrl || manifest.downloadUrl || '',
+    yontem: 'zip'
+  };
+}
+
 function registerPaketGuncelleme(app, opts) {
   const { gercekKlasor, CKSPAKET_MOD, authenticateToken, sadeceAdmin } = opts;
   if (!CKSPAKET_MOD) return;
+
+  let durumBaslat = () => {};
+  let durumOku = () => null;
+  let durumGuncelle = () => {};
+  let durumBitir = () => {};
+  try {
+    const d = require('./guncelleme-durum');
+    durumBaslat = d.durumBaslat;
+    durumOku = d.durumOku;
+    durumGuncelle = d.durumGuncelle;
+    durumBitir = d.durumBitir;
+  } catch (_) {}
+
+  let yayinlaCalisiyor = false;
 
   const guncellemeKlasor = path.join(gercekKlasor, 'guncellemeler');
   if (!fs.existsSync(guncellemeKlasor)) {
@@ -135,26 +249,38 @@ function registerPaketGuncelleme(app, opts) {
         }
       }
 
-      const manifestUrl = String(process.env.GUNCELLEME_URL || '').trim();
-      if (!manifestUrl) {
-        return res.json({
-          success: true,
-          guncellemeVar: false,
-          mevcutSurum: mevcut.surum,
-          mesaj: 'GIT_REPO_URL veya GUNCELLEME_URL tanımlı değil (.env)'
-        });
+      const yerelSonuc = yerelGuncellemeKontrol(gercekKlasor);
+      if (yerelSonuc && (yerelSonuc.guncellemeVar || yerelSonuc.mesaj)) {
+        return res.json({ success: true, ...yerelSonuc });
       }
-      const manifest = await uzakManifestAl(manifestUrl);
-      const yeniSurum = String(manifest.surum || manifest.version || '').trim();
-      const guncellemeVar = Boolean(yeniSurum && surumKarsilastir(yeniSurum, mevcut.surum) > 0);
-      res.json({
+
+      if (zipGuncellemeAktifMi()) {
+        try {
+          const zipSonuc = await zipManifestKontrol(gercekKlasor);
+          if (zipSonuc) {
+            return res.json({ success: true, ...zipSonuc });
+          }
+        } catch (err) {
+          return res.json({
+            success: false,
+            guncellemeVar: false,
+            message: err.message || 'Güncelleme sunucusuna ulaşılamadı (GUNCELLEME_URL)'
+          });
+        }
+      }
+
+      if (require('./git-guncelleme').gitGuncellemeAktifMi(gercekKlasor)) {
+        const gitSonuc = await require('./git-guncelleme').gitUzakSurumKontrol(gercekKlasor);
+        if (gitSonuc) {
+          return res.json({ success: true, ...gitSonuc });
+        }
+      }
+
+      return res.json({
         success: true,
-        guncellemeVar,
+        guncellemeVar: false,
         mevcutSurum: mevcut.surum,
-        yeniSurum,
-        tarih: manifest.tarih || manifest.releaseDate || '',
-        notlar: manifest.notlar || manifest.notes || manifest.changelog || '',
-        indirmeUrl: manifest.indirmeUrl || manifest.downloadUrl || ''
+        mesaj: 'GIT_REPO_URL tanımlı değil (.env)'
       });
     } catch (err) {
       res.json({
@@ -165,7 +291,92 @@ function registerPaketGuncelleme(app, opts) {
     }
   });
 
+  app.get('/api/paket-guncelle-durum', (_req, res) => {
+    try {
+      const durum = durumOku(gercekKlasor, 'guncelleme');
+      res.json({ success: true, durum: durum || { yuzde: 0, mesaj: 'Bekleniyor…', bitti: false } });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.get('/api/paket-gelistirici', (_req, res) => {
+    const yayinla = path.join(gercekKlasor, 'ckspaket-yayinla.js');
+    const paketle = path.join(gercekKlasor, 'ckspaket-paketle.js');
+    res.json({ success: true, gelistirici: fs.existsSync(yayinla) || fs.existsSync(paketle) });
+  });
+
   if (authenticateToken && sadeceAdmin) {
+    app.get('/api/paket-yayinla-durum', (_req, res) => {
+      try {
+        const durum = durumOku(gercekKlasor, 'yayinla');
+        res.json({
+          success: true,
+          calisiyor: yayinlaCalisiyor,
+          durum: durum || { yuzde: 0, mesaj: 'Hazır', bitti: true }
+        });
+      } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+      }
+    });
+
+    app.post('/api/paket-yayinla', authenticateToken, sadeceAdmin, (req, res) => {
+      try {
+        const yayinla = path.join(gercekKlasor, 'ckspaket-yayinla.js');
+        if (!fs.existsSync(yayinla)) {
+          return res.status(403).json({
+            success: false,
+            message: 'Geliştirici yayın modülü yok (müşteri kurulumu)'
+          });
+        }
+        if (yayinlaCalisiyor) {
+          return res.status(409).json({ success: false, message: 'Sürüm çıkarma zaten çalışıyor' });
+        }
+
+        const notlar = String(req.body?.notlar || '').trim() || 'Arayüzden sürüm çıkarma';
+        durumBaslat(gercekKlasor, 'yayinla', 'Sürüm artırılıyor…');
+        yayinlaCalisiyor = true;
+
+        res.json({ success: true, message: 'Git\'e gönderiliyor — müşteriler otomatik güncelleme görecek' });
+
+        const args = ['ckspaket-yayinla.js'];
+        if (notlar) args.push(notlar);
+
+        durumGuncelle(gercekKlasor, 25, 'Git commit + push yapılıyor…', 'git-push', 'yayinla');
+
+        const child = spawn(process.execPath, args, {
+          cwd: gercekKlasor,
+          env: process.env,
+          windowsHide: true,
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+
+        child.on('close', (code) => {
+          yayinlaCalisiyor = false;
+          if (code === 0) {
+            const surum = mevcutSurumAl(gercekKlasor).surum;
+            durumBitir(
+              gercekKlasor,
+              true,
+              `v${surum} GitHub'da — müşteriler güncelleyebilir`,
+              surum,
+              'yayinla'
+            );
+          } else {
+            durumBitir(gercekKlasor, false, `Git yayını başarısız (kod ${code})`, null, 'yayinla');
+          }
+        });
+
+        child.on('error', (err) => {
+          yayinlaCalisiyor = false;
+          durumBitir(gercekKlasor, false, err.message, null, 'yayinla');
+        });
+      } catch (err) {
+        yayinlaCalisiyor = false;
+        res.status(500).json({ success: false, message: err.message });
+      }
+    });
+
     app.post('/api/paket-guncelle-uygula', authenticateToken, sadeceAdmin, (req, res) => {
       try {
         const bat = path.join(gercekKlasor, 'ckspaket-musteri-guncelle.bat');
@@ -174,12 +385,13 @@ function registerPaketGuncelleme(app, opts) {
           return res.status(404).json({ success: false, message: 'ckspaket-musteri-guncelle.bat bulunamadı' });
         }
 
+        durumBaslat(gercekKlasor, 'guncelleme', 'Güncelleme başlatılıyor…');
+
         res.json({
           success: true,
-          message: 'Güncelleme başlatıldı. Konsol penceresi açılacak; sunucu kapanıp güncelleme uygulanacak ve otomatik yeniden açılacak.'
+          message: 'Güncelleme başlatıldı. Sunucu kapanıp güncelleme uygulanacak ve otomatik yeniden açılacak.'
         });
 
-        // Yanıt gittikten sonra başlat — sunucu kapanınca child process ölmesin diye VBS/start kullan
         setTimeout(() => {
           try {
             const logsDir = path.join(gercekKlasor, 'logs');
@@ -206,7 +418,7 @@ function registerPaketGuncelleme(app, opts) {
           const logQ = logFile.replace(/"/g, '""');
           const child = spawn(
             'cmd.exe',
-            ['/c', `start "CKSPaket Guncelleme" /MIN cmd /c "${batQ}" >> "${logQ}" 2>&1`],
+            ['/c', `start "" /MIN cmd /c "${batQ}" >> "${logQ}" 2>&1`],
             { detached: true, stdio: 'ignore', cwd: gercekKlasor, windowsHide: true }
           );
           child.unref();
@@ -226,5 +438,12 @@ module.exports = {
   surumSenkronYaz,
   manifestYaz,
   envGuncellemeUrlAyarla,
+  lanIpBul,
+  yerelManifestOku,
+  yerelGuncellemeKontrol,
+  manifestZipDosya,
+  zipGuncellemeAktifMi,
+  guncellemeYontemiAl,
+  zipManifestKontrol,
   registerPaketGuncelleme
 };

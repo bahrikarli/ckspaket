@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personel Paneli</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    
+    /* MODAL İÇİNE TAM UYUM İÇİN BODY AYARLARI */
+    body { 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        background: transparent; /* Arka planı tamamen beyaz/şeffaf yaptık */
+        padding: 30px 40px; /* Çarpı butonuyla çakışmasın ve kenarlardan nefes alsın diye boşluk */
+    }
+    
+    .container { 
+        width: 100%; 
+        margin: 0 auto; 
+        background: transparent; 
+        /* Modalın kendisi zaten gölgeli olduğu için iç kutunun gölgesini kaldırdık */
+        box-shadow: none; 
+        border-radius: 0;
+    }
+
+    .header-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+        margin-bottom: 25px;
+    }
+
+    .header-area h2 {
+        color: #006400;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .yeni-kullanici { 
+        background: #006400; 
+        color: white; 
+        padding: 10px 22px; 
+        font-size: 14px; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        transition: 0.2s;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .yeni-kullanici:hover { background: #004d00; transform: translateY(-2px); }
+
+    /* Tablo Tasarımı */
+    table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        margin-top: 10px;
+    }
+    th { 
+        background: #f8f9fa; 
+        color: #495057; 
+        padding: 16px; 
+        font-size: 14px; 
+        text-align: left;
+        border-bottom: 2px solid #dee2e6;
+    }
+    td { 
+        padding: 16px; 
+        font-size: 14px; 
+        color: #333;
+        border-bottom: 1px solid #eee;
+    }
+    tr:hover { background: #f8f9fa; }
+    
+    .btn-danger { 
+        background: #dc3545; 
+        color: white; 
+        padding: 8px 14px; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-size: 12px;
+        font-weight: bold; 
+        transition: 0.2s; 
+    }
+    .btn-danger:hover { background: #c82333; }
+
+    .role-badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .role-admin { background: #ffeeba; color: #c00; }
+    .role-user { background: #eef6ee; color: #006400; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-area">
+        <h2><i class="fas fa-users-cog"></i> Personel Yönetim Paneli</h2>
+        <div class="yeni-kullanici" onclick="yeniKullanici()"><i class="fas fa-user-plus"></i> Yeni Ekle</div>
+    </div>
+
+    <table id="tablo">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kullanıcı Adı</th>
+                <th>Ad Soyad</th>
+                <th>E-posta</th>
+                <th>Rol</th>
+                <th style="text-align: center;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+
+// 1. Hoş geldin ismini yaz ve yetki kontrolü yap
+fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
+  .then(r => r.json())
+  .then(d => {
+    if(d.success) {
+      const ad = d.user.Ad || d.user.ad || '';
+      const soyad = d.user.Soyad || d.user.soyad || '';
+      const ka = d.user.KullaniciAdi || d.user.kullaniciadi || 'Personel';
+      
+      const tamIsim = (ad || soyad) ? `${ad} ${soyad}`.trim() : ka;
+      localStorage.setItem('aktifPersonelIsmi', tamIsim);
+
+      const rol = String(d.user.rol || d.user.Rol || '').toLowerCase();
+      if(rol === 'admin') {
+          yukle(); 
+      } else {
+          alert("Bu panele sadece adminler erişebilir!");
+          location.href = 'anasayfa.html';
+      }
+    } else {
+      location.href = '/';
+    }
+  })
+  .catch(err => {
+      console.error("Kullanıcı bilgisi alınamadı:", err);
+      location.href = '/';
+  });
+
+// 2. Personelleri tabloya yükle 
+async function yukle(){
+  try {
+    const res = await fetch('/api/kullanicilar', {headers:{Authorization:'Bearer '+token}});
+    
+    if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Yetkisiz erişim!");
+    }
+    
+    const veri = await res.json();
+    const liste = Array.isArray(veri) ? veri : (veri.data || veri.kullanicilar || []);
+    
+    const tbody = document.querySelector('#tablo tbody');
+    tbody.innerHTML = '';
+    
+    liste.forEach(u => {
+      const rolStr = String(u.rol || 'user').toLowerCase();
+      const roleClass = rolStr === 'admin' ? 'role-admin' : 'role-user';
+
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>#${u.id}</strong></td>
+          <td>${u.kullaniciadi}</td>
+          <td>${u.adsoyad}</td>
+          <td>${u.email}</td>
+          <td><span class="role-badge ${roleClass}">${rolStr.toUpperCase()}</span></td>
+          <td style="text-align: center;"><button class="btn-danger" onclick="sil(${u.id})"><i class="fas fa-trash-alt"></i> SİL</button></td>
+        </tr>`;
+    });
+  } catch (err) {
+    console.error("Tablo Yükleme Hatası:", err);
+    alert("Kullanıcılar yüklenirken bir hata oluştu!\nDetay: " + err.message);
+  }
+}
+
+// Yeni kullanıcı
+async function yeniKullanici(){
+  const ka = prompt("Kullanıcı adı:");
+  if(!ka?.trim()) return;
+  const sifre = prompt("Şifre (boş bırak = 12345)", "12345");
+  const ad = prompt("Ad:", "") || "";
+  const soyad = prompt("Soyad:", "") || "";
+  const email = prompt("E-posta:", "") || "";
+  const rol = prompt("Rol (admin / user)", "user") || "user";
+
+  try {
+      const res = await fetch('/api/yenikullanici', {
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+        body:JSON.stringify({ka:ka.trim(), sifre:sifre||'12345', ad, soyad, email, rol})
+      });
+      
+      if(res.ok) {
+          alert("Personel başarıyla eklendi!");
+          yukle();
+      } else {
+          alert("Personel eklenemedi, sunucu hatası!");
+      }
+  } catch (e) {
+      alert("Bağlantı hatası yaşandı.");
+  }
+}
+
+// Sil
+async function sil(id){
+  if(!confirm("Bu personeli silmek istediğine emin misin?")) return;
+  try {
+      const res = await fetch('/api/sil/'+id, {method:'DELETE', headers:{Authorization:'Bearer '+token}});
+      if(res.ok) {
+          yukle();
+      } else {
+          alert("Silme işlemi başarısız.");
+      }
+  } catch(e) {
+      alert("Bağlantı hatası yaşandı.");
+  }
+}
+</script>
+</body>
+</html>

@@ -201,9 +201,12 @@ CKSPAKET=1
 MESAI_WA_AKTIF=false
 ZOBIS_HATIRLATMA_AKTIF=false
 
-# Git guncelleme
+# Git guncelleme — gelistirici "Surum Cik" yapinca GitHub'dan otomatik cekilir
+# (.env, taramalar, uploads dokunulmaz)
 GIT_REPO_URL=https://github.com/bahrikarli/ckspaket.git
 GIT_BRANCH=main
+
+# Ozel repo: GIT_TOKEN=ghp_xxxx
 
 # Ozel repo: GIT_TOKEN=ghp_xxxx
 `;
@@ -270,12 +273,38 @@ function zipOlustur(kaynakKlasor, zipYol) {
   execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'inherit' });
 }
 
-function manifestVeZipKaydet(surum, zipAdi, ip, port) {
+function musteriVerKlasoruOlustur(surum, zipAdi) {
+  const hedef = path.join(KOK, 'MUSTERIYE-VER', `v${surum}`);
+  fs.mkdirSync(hedef, { recursive: true });
+  fs.copyFileSync(path.join(GUNCELLEME, zipAdi), path.join(hedef, zipAdi));
+  fs.copyFileSync(path.join(GUNCELLEME, 'guncelleme.json'), path.join(hedef, 'guncelleme.json'));
+  const talimat = [
+    `CKS Paket — v${surum} Guncelleme Paketi`,
+    '',
+    'MUSTERIYE GONDERIN (USB, e-posta, Teams vb.):',
+    `  1) ${zipAdi}`,
+    '  2) guncelleme.json',
+    '',
+    'Musteri bilgisayarinda:',
+    '  1) Her iki dosyayi C:\\ckspaket\\guncellemeler\\ icine kopyalayin',
+    '  2) ckspaket-musteri-guncelle.bat calistirin',
+    '',
+    'IP adresi veya internet gerekmez.'
+  ].join('\r\n');
+  fs.writeFileSync(path.join(hedef, 'NASIL-KURULUR.txt'), talimat + '\r\n', 'utf8');
+  console.log('  OK: MUSTERIYE-VER/v' + surum + '/');
+  return hedef;
+}
+
+function manifestVeZipKaydet(surum, zipAdi) {
   fs.mkdirSync(GUNCELLEME, { recursive: true });
   fs.copyFileSync(path.join(DIST, zipAdi), path.join(GUNCELLEME, zipAdi));
   console.log('  OK: guncellemeler/' + zipAdi);
-  manifestYaz(KOK, surum, zipAdi, ip, port, notlar);
+  manifestYaz(KOK, surum, zipAdi, null, null, notlar);
   console.log('  OK: guncellemeler/guncelleme.json');
+  if (MUSTERI_MOD) {
+    musteriVerKlasoruOlustur(surum, zipAdi);
+  }
 }
 
 // manifestYaz — paket-guncelleme.js uzerinden (manifestVeZipKaydet)
@@ -283,11 +312,6 @@ function manifestVeZipKaydet(surum, zipAdi, ip, port) {
 const surum = surumAl();
 const zipAdi = MUSTERI_MOD ? `ckspaket-v${surum}-musteri.zip` : `ckspaket-v${surum}.zip`;
 const zipYol = path.join(DIST, zipAdi);
-const { ip, port } = (() => {
-  const i = String(process.env.CKS_SUNUCU_IP || '127.0.0.1').trim();
-  const p = String(process.env.CKS_PORT || process.env.PORT || '3030').trim();
-  return { ip: i, port: p };
-})();
 
 console.log(MUSTERI_MOD ? '=== CKS Paket — MUSTERI SURUM ===' : '=== CKS Paket — Musteri ZIP ===');
 console.log('Surum: v' + surum);
@@ -307,7 +331,7 @@ if (!MUSTERI_MOD) {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-manifestVeZipKaydet(surum, zipAdi, ip, port);
+manifestVeZipKaydet(surum, zipAdi);
 
 console.log('');
 console.log('Tamamlandi.');

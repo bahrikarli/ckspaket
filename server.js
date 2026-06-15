@@ -30,7 +30,7 @@ try {
 } catch (_) {}
 
 const CKSPAKET_MOD = process.env.CKSPAKET === '1' || /ckspaket/i.test(String(gercekKlasorErken));
-const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join('C:', 'cks', 'taramalar');
+const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join(gercekKlasorErken, 'taramalar');
 
 const express = require('express');
 const cors = require('cors');
@@ -1990,7 +1990,7 @@ app.get('/api/belgenet-istatistik', authenticateToken, async (req, res) => {
 });
 
 // --- BELGENET VE PDF SİSTEMİ ---
-// Paket: /taramalar ortak CKS havuzundan (C:\cks\taramalar)
+// Paket: /taramalar — ckspaket tarama havuzu (program klasoru\taramalar)
 app.use('/taramalar', (req, res, next) => {
   const kok = taramaKokYol(sistemAyarAl());
   express.static(kok)(req, res, next);

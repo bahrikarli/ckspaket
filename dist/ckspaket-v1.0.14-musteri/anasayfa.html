@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sarayönü Ziraat Odası — CKS Paket</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#228B22,#87CEEB);min-height:100vh;}
+    .header{background:#006400;color:white;text-align:center;padding:20px 15px;box-shadow:0 4px 15px rgba(0,0,0,0.3);}
+    .logo{width:140px;height:140px;border-radius:50%;border:5px solid white;box-shadow:0 5px 20px rgba(0,0,0,0.4);}
+    .title{margin-top:10px;font-size:28px;font-weight:bold;}
+    .subtitle{margin-top:4px;font-size:14px;opacity:0.9;}
+    .user{margin-top:8px;font-size:22px;}
+    .container{max-width:1100px;margin:30px auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 15px 40px rgba(0,0,0,0.3);}
+    .menu{display:flex;flex-wrap:wrap;gap:25px;padding:50px;justify-content:center;}
+    .card{background:#f8fff8;width:290px;padding:30px;border-radius:15px;text-align:center;box-shadow:0 8px 25px rgba(0,0,0,0.15);transition:0.4s;cursor:pointer;}
+    .card:hover{transform:translateY(-12px);box-shadow:0 20px 40px rgba(0,0,0,0.25);}
+    .card i{font-size:60px;color:#006400;margin-bottom:20px;}
+    .card h3{color:#006400;font-size:24px;margin-bottom:10px;}
+    .logout{position:fixed;bottom:25px;right:25px;background:#c00;color:white;padding:18px 35px;border-radius:50px;font-weight:bold;font-size:18px;cursor:pointer;box-shadow:0 5px 15px rgba(0,0,0,0.3);}
+  </style>
+  <link rel="icon" href="data:,">
+</head>
+<body>
+
+<div class="header">
+  <img src="tzob-logo.png" alt="TZOB Logo" class="logo" onerror="this.style.display='none'">
+  <div class="title" id="kurum-baslik">…</div>
+  <div class="subtitle">CKS Paket — Ofis Sistemi</div>
+  <div class="user">Hoş geldin, <strong id="isim">Personel</strong></div>
+</div>
+
+<div class="container">
+  <div class="menu">
+
+    <div class="card" id="adminPanelButon" style="display:none;" onclick="personelPaneliAc()">
+      <i class="fas fa-users-cog"></i>
+      <h3>Personel Paneli</h3>
+      <p>Kullanıcıları yönet</p>
+    </div>
+
+    <div class="card" onclick="cksAc()">
+      <i class="fas fa-tractor"></i>
+      <h3>Çiftçi Kayıt</h3>
+      <p>Yeni çiftçi ekle</p>
+    </div>
+
+    <div class="card" onclick="arsivAc()">
+      <i class="fas fa-archive"></i>
+      <h3>Arşiv</h3>
+      <p>Odalar ve ÇKS dosyaları</p>
+    </div>
+
+    <div class="card" onclick="tarimRehberModalAc()">
+      <i class="fas fa-cloud-sun"></i>
+      <h3>Tarım Rehberi</h3>
+      <p>TMO · Hava · Zirai Mücadele</p>
+    </div>
+
+    <div class="card" onclick="profilAc()">
+      <i class="fas fa-user-edit"></i>
+      <h3>Profilim</h3>
+      <p>Bilgilerini güncelle</p>
+    </div>
+
+    <div class="card" onclick="mesajlarAc()" style="position:relative;">
+      <i class="fas fa-comments"></i>
+      <span id="yeni-mesaj-rozeti" style="display:none;position:absolute;top:18px;right:22px;background:#e74c3c;color:white;font-weight:bold;font-size:12px;min-width:22px;height:22px;line-height:22px;border-radius:11px;border:2px solid white;"></span>
+      <h3>Mesajlar</h3>
+      <p>Personellerle mesajlaş</p>
+    </div>
+
+  </div>
+</div>
+
+<div id="personelPaneliModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999;">
+  <div style="background:white; margin:1% auto; width:95%; height:92%; border-radius:15px; overflow:hidden; position:relative;">
+    <button onclick="personelPaneliKapat()" style="position:absolute; top:10px; right:20px; font-size:35px; border:none; background:none; cursor:pointer; z-index:1000; color:#333;">&times;</button>
+    <iframe src="" id="dashboardFrame" style="width:100%; height:100%; border:none;"></iframe>
+  </div>
+</div>
+
+<div id="mesajlarModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999;">
+  <div style="background:white; margin:1% auto; width:95%; height:92%; border-radius:15px; overflow:hidden; position:relative;">
+    <button onclick="document.getElementById('mesajlarModal').style.display='none'" style="position:absolute; top:10px; right:20px; font-size:35px; border:none; background:none; cursor:pointer; z-index:1000; color:#333;">&times;</button>
+    <iframe src="mesajlar.html" style="width:100%; height:100%; border:none;"></iframe>
+  </div>
+</div>
+
+<div id="tarimRehberModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:200000;" onclick="if(event.target===this)tarimRehberModalKapat()">
+  <div style="background:white; margin:3% auto; width:92%; max-width:780px; height:85vh; border-radius:15px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#f5f7f5; border-bottom:1px solid #e0e8e0; flex-shrink:0;">
+      <span style="font-weight:700; color:#1e5c2a; font-size:14px;"><i class="fas fa-leaf"></i> Tarım Rehberi</span>
+      <button type="button" onclick="tarimRehberModalKapat()" style="border:none; background:#e8f5e9; color:#2e7d32; width:36px; height:36px; border-radius:8px; font-size:22px; cursor:pointer; line-height:1; font-weight:700;" title="Kapat">&times;</button>
+    </div>
+    <iframe id="tarimRehberFrame" src="" title="Tarım Rehberi" style="width:100%; flex:1; border:none;"></iframe>
+  </div>
+</div>
+
+<div id="cksModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999;">
+  <div style="background:white; margin:1% auto; width:98%; height:96%; border-radius:15px; overflow:hidden; position:relative; box-shadow: 0 0 30px rgba(0,0,0,0.5);">
+    <button id="cksModalKapatBtn" onclick="document.getElementById('cksModal').style.display='none'" style="position:absolute; top:15px; right:25px; font-size:40px; border:none; background:white; color:#c00; cursor:pointer; z-index:1000; border-radius:50%; width:50px; height:50px; line-height:50px; box-shadow:0 2px 10px rgba(0,0,0,0.2);">&times;</button>
+    <iframe src="cks.html" style="width:100%; height:100%; border:none;"></iframe>
+  </div>
+</div>
+
+<div id="profilModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999;">
+  <div style="background:white; margin:80px auto; padding:40px; width:90%; max-width:500px; border-radius:15px; position:relative;">
+    <span onclick="document.getElementById('profilModal').style.display='none'" style="position:absolute; top:15px; right:20px; font-size:35px; cursor:pointer;">×</span>
+    <h2 style="text-align:center; color:#006400; margin-bottom:30px;">Bilgilerini Güncelle</h2>
+    <input type="text" id="p_ad" placeholder="Ad" style="width:100%; padding:15px; margin:10px 0; border:2px solid #006400; border-radius:10px; font-size:16px;"><br>
+    <input type="text" id="p_soyad" placeholder="Soyad" style="width:100%; padding:15px; margin:10px 0; border:2px solid #006400; border-radius:10px; font-size:16px;"><br>
+    <input type="email" id="p_email" placeholder="E-posta" style="width:100%; padding:15px; margin:10px 0; border:2px solid #006400; border-radius:10px; font-size:16px;"><br>
+    <input type="password" id="p_sifre" placeholder="Yeni şifre (boş bırak = değişmez)" style="width:100%; padding:15px; margin:10px 0; border:2px solid #006400; border-radius:10px; font-size:16px;"><br>
+    <button onclick="profilGuncelle()" style="width:100%; background:#006400; color:white; padding:18px; border:none; border-radius:10px; font-size:18px; cursor:pointer; margin-top:20px;">GÜNCELLE VE KAYDET</button>
+  </div>
+</div>
+
+<div id="arsivIframeModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000;">
+  <div style="background:white; margin:2% auto; width:98%; max-width:1500px; height:90vh; border-radius:15px; position:relative; overflow:hidden; box-shadow: 0 5px 30px rgba(0,0,0,0.5);">
+    <div style="padding:15px 25px; border-bottom:2px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f8f9fa;">
+      <h3 style="margin:0; color:#006400;"><i class="fas fa-archive"></i> Arşiv — Odalar ve ÇKS Dosyaları</h3>
+      <span onclick="arsivKapat()" style="font-size:40px; cursor:pointer; color:#888; line-height: 0.8;">&times;</span>
+    </div>
+    <iframe src="" id="arsivFrame" style="width:100%; height:calc(100% - 65px); border:none;"></iframe>
+  </div>
+</div>
+
+<div class="logout" onclick="cikis()">ÇIKIŞ YAP</div>
+
+<script src="/kurum-baslik.js"></script>
+<script>
+kurumBaslikYukle({ titleSuffix: ' — CKS Paket' });
+
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+
+fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
+  .then(r => r.json())
+  .then(d => {
+    if(d.success) {
+      const tamAd = d.user.ad ? `${d.user.ad} ${d.user.soyad}` : d.user.kullaniciadi;
+      document.getElementById('isim').innerText = tamAd;
+      localStorage.setItem('personelAd', tamAd);
+      if(d.user.rol === 'admin') {
+        document.getElementById('adminPanelButon').style.display = 'block';
+      }
+    } else {
+      localStorage.clear();
+      location.href = '/';
+    }
+  });
+
+function personelPaneliAc() {
+  document.getElementById('dashboardFrame').src = "dashboard.html";
+  document.getElementById('personelPaneliModal').style.display = 'block';
+}
+
+function personelPaneliKapat() {
+  document.getElementById('personelPaneliModal').style.display = 'none';
+  document.getElementById('dashboardFrame').src = "";
+}
+
+async function profilAc() {
+  const res = await fetch('/api/me', {headers:{Authorization:'Bearer '+token}});
+  const d = await res.json();
+  if(!d.success) return alert("Oturum hatası");
+  document.getElementById('p_ad').value    = d.user.ad || '';
+  document.getElementById('p_soyad').value = d.user.soyad || '';
+  document.getElementById('p_email').value = d.user.email || '';
+  document.getElementById('p_sifre').value = '';
+  document.getElementById('profilModal').style.display = 'block';
+}
+
+async function profilGuncelle() {
+  const ad = document.getElementById('p_ad').value.trim();
+  const soyad = document.getElementById('p_soyad').value.trim();
+  const email = document.getElementById('p_email').value.trim();
+  const sifre = document.getElementById('p_sifre').value;
+  const body = {};
+  if(ad) body.ad = ad;
+  if(soyad) body.soyad = soyad;
+  if(email) body.email = email;
+  if(sifre) body.sifre = sifre;
+  if(Object.keys(body).length === 0) return alert("Hiçbir değişiklik yapmadınız");
+  try {
+    const res = await fetch('/api/profil', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if(data.success) {
+      alert("Bilgileriniz başarıyla güncellendi!");
+      document.getElementById('profilModal').style.display = 'none';
+      document.getElementById('isim').innerText = ad && soyad ? `${ad} ${soyad}` : document.getElementById('isim').innerText;
+    } else {
+      alert(data.message || "Güncelleme başarısız!");
+    }
+  } catch (err) {
+    alert("Bağlantı hatası!");
+  }
+}
+
+function cikis() {
+  if(confirm("Çıkış yapmak istediğinize emin misiniz?")) {
+    localStorage.clear();
+    location.href = '/';
+  }
+}
+
+function cksAc() {
+  document.getElementById('cksModal').style.display = 'block';
+}
+
+function mesajlarAc() {
+  if (typeof mesajModalAc === 'function') {
+    mesajModalAc();
+    return;
+  }
+  document.getElementById('mesajlarModal').style.display = 'block';
+}
+
+function arsivAc() {
+  document.getElementById('arsivFrame').src = "arsiv.html";
+  document.getElementById('arsivIframeModal').style.display = 'block';
+}
+
+function arsivKapat() {
+  document.getElementById('arsivIframeModal').style.display = 'none';
+  document.getElementById('arsivFrame').src = "";
+}
+
+function tarimRehberModalAc() {
+  const modal = document.getElementById('tarimRehberModal');
+  if (!modal) { window.open('tarim-rehber.html', '_blank'); return; }
+  const cksKapat = document.getElementById('cksModalKapatBtn');
+  if (cksKapat) cksKapat.style.display = 'none';
+  const frame = document.getElementById('tarimRehberFrame');
+  if (frame) frame.src = 'tarim-rehber.html?modal=1';
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function tarimRehberModalKapat() {
+  const modal = document.getElementById('tarimRehberModal');
+  if (modal) modal.style.display = 'none';
+  const frame = document.getElementById('tarimRehberFrame');
+  if (frame) frame.src = '';
+  const cksKapat = document.getElementById('cksModalKapatBtn');
+  if (cksKapat) cksKapat.style.display = '';
+  document.body.style.overflow = '';
+}
+
+window.onclick = function(event) {
+  const modallar = [
+    document.getElementById('profilModal'),
+    document.getElementById('cksModal'),
+    document.getElementById('mesajlarModal'),
+    document.getElementById('personelPaneliModal'),
+    document.getElementById('arsivIframeModal'),
+    document.getElementById('tarimRehberModal')
+  ];
+  modallar.forEach(modal => {
+    if (modal && event.target == modal) {
+      if(modal.id === 'personelPaneliModal') personelPaneliKapat();
+      else if(modal.id === 'arsivIframeModal') arsivKapat();
+      else if(modal.id === 'tarimRehberModal') tarimRehberModalKapat();
+      else modal.style.display = "none";
+    }
+  });
+}
+</script>
+<link rel="stylesheet" href="/mesaj-global.css">
+<script src="/mesaj-global.js" defer></script>
+<script src="/ckspaket-surum-ui.js" defer></script>
+</body>
+</html>

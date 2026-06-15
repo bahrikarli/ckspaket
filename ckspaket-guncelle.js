@@ -41,9 +41,10 @@ const KOPYALA = [
 ];
 
 const KORU = new Set([
-  'anasayfa.html', 'arsiv.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'anasayfa.html', 'index.html', 'arsiv.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
-  'sistem-ayar.js', 'config.js'
+  'sistem-ayar.js', 'config.js',
+  'kurum-sunucu.js', 'kurum-ayar.js', 'kurum-baslik.js', 'kurum-ayar-client.js'
 ]);
 
 const TARAMA_ALT = ['ckstaramalar', '2026cks', '2027cks', 'ib', 'ibtaramalar'];
@@ -87,12 +88,16 @@ function serverJsPaketYamasi() {
   if (!s.includes('CKSPAKET_MOD')) {
     s = s.replace(
       /} catch \(_\) \{\}\s*\n\s*\nconst express = require\('express'\);/,
-      `} catch (_) {}\n\nconst CKSPAKET_MOD = process.env.CKSPAKET === '1' || /ckspaket/i.test(String(gercekKlasorErken));\nconst CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join('C:', 'cks', 'taramalar');\n\nconst express = require('express');`
+      `} catch (_) {}\n\nconst CKSPAKET_MOD = process.env.CKSPAKET === '1' || /ckspaket/i.test(String(gercekKlasorErken));\nconst CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join(gercekKlasorErken, 'taramalar');\n\nconst express = require('express');`
     );
   }
   s = s.replace(
+    /const CKSPAKET_TARAMA_KOK = process\.env\.CKS_TARAMA_KOK \|\| path\.join\('C:', 'cks', 'taramalar'\);/,
+    "const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join(gercekKlasorErken, 'taramalar');"
+  );
+  s = s.replace(
     /const CKSPAKET_TARAMA_KOK = path\.join\(gercekKlasorErken, 'taramalar'\);/,
-    "const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join('C:', 'cks', 'taramalar');"
+    "const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join(gercekKlasorErken, 'taramalar');"
   );
 
   s = s.replace(/\n\/\*\* Ana CKS[\s\S]*?function sistemAyarAnaCksUygula\(\) \{[\s\S]*?\n\}\n/g, '\n');
@@ -145,7 +150,7 @@ async function sistemAyarDbYukle() {`
     s = s.replace(
       '// --- BELGENET VE PDF SİSTEMİ ---',
       `// --- BELGENET VE PDF SİSTEMİ ---
-// Paket: /taramalar ortak CKS havuzundan (C:\\cks\\taramalar)
+// Paket: /taramalar — ckspaket tarama havuzu (program klasoru\\taramalar)
 app.use('/taramalar', (req, res, next) => {
   const kok = taramaKokYol(sistemAyarAl());
   express.static(kok)(req, res, next);

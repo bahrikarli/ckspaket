@@ -5,30 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const { kurumGenelOku, htmlKurumEnjekte } = require('./kurum-ayar');
 
-function paketSurumAl(kok) {
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(kok, 'package.json'), 'utf8'));
-    return String(pkg.version || '').trim();
-  } catch (_) {
-    return '';
-  }
-}
-
-function htmlSurumEnjekte(html, surum) {
-  if (!surum) return html;
-  const etiket = `Sürüm v${surum}`;
-  if (/id="paket-surum-metin"/i.test(html)) {
-    return html.replace(
-      /(<[^>]*id="paket-surum-metin"[^>]*>)[^<]*(<\/[^>]+>)/i,
-      `$1${etiket}$2`
-    );
-  }
-  return html.replace(
-    /(<div class="subtitle">CKS Paket[^<]*<\/div>)/i,
-    `$1\n  <div id="paket-surum-etiket" style="margin-top:6px;font-size:13px;opacity:0.85;"><span id="paket-surum-metin">${etiket}</span></div>`
-  );
-}
-
 function registerKurumSunucu(app, opts) {
   const { getPool, gercekKlasor, authenticateToken } = opts;
   if (!app || !getPool || !gercekKlasor) return;
@@ -36,16 +12,6 @@ function registerKurumSunucu(app, opts) {
   app.get('/api/kurum-genel', async (_req, res) => {
     try {
       res.json(await kurumGenelOku(getPool));
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  });
-
-  app.get('/api/paket-surum', (_req, res) => {
-    try {
-      const surum = paketSurumAl(gercekKlasor);
-      if (!surum) return res.status(500).json({ success: false, message: 'package.json okunamadi' });
-      res.json({ success: true, surum, ad: 'ckspaket' });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -71,12 +37,9 @@ function registerKurumSunucu(app, opts) {
       const kurum = await kurumGenelOku(getPool);
       let html = fs.readFileSync(path.join(gercekKlasor, 'anasayfa.html'), 'utf8');
       html = htmlKurumEnjekte(html, kurum.kurum_adi, ' — CKS Paket');
-      html = htmlSurumEnjekte(html, paketSurumAl(gercekKlasor));
       res.type('html').send(html);
     } catch (_) {
-      let html = fs.readFileSync(path.join(gercekKlasor, 'anasayfa.html'), 'utf8');
-      html = htmlSurumEnjekte(html, paketSurumAl(gercekKlasor));
-      res.type('html').send(html);
+      res.sendFile(path.join(gercekKlasor, 'anasayfa.html'));
     }
   });
 }

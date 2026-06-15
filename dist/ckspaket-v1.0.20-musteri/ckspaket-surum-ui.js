@@ -144,45 +144,20 @@
     }
   }
 
-  async function sunucuHazirMi() {
-    const urls = ['/api/health', '/api/paket-surum', '/api/kurum-genel'];
-    for (const url of urls) {
-      try {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (res.ok) return true;
-      } catch (_) {}
-    }
-    return false;
-  }
-
-  async function kuruluSurumOku() {
+  async function healthKontrol() {
     try {
-      const res = await fetch('/api/paket-surum', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.surum) return data.surum;
-      }
-    } catch (_) {}
-    return '';
-  }
-
-  function surumKarsilastir(a, b) {
-    const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
-    const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
-    const uzun = Math.max(pa.length, pb.length);
-    for (let i = 0; i < uzun; i++) {
-      const diff = (pa[i] || 0) - (pb[i] || 0);
-      if (diff !== 0) return diff;
+      const res = await fetch('/api/health', { cache: 'no-store' });
+      return res.ok;
+    } catch (_) {
+      return false;
     }
-    return 0;
   }
 
   async function guncellemeIlerlemeIzle(hedefSurum) {
     modalGoster('Güncelleniyor', 'Güncelleme başlatılıyor…', 5);
     const baslangic = Date.now();
-    const maxMs = 15 * 60 * 1000;
+    const maxMs = 12 * 60 * 1000;
     let sunucuKapandi = false;
-    let guncellemeBitti = false;
     let sonYuzde = 5;
 
     while (Date.now() - baslangic < maxMs) {
@@ -197,47 +172,42 @@
           return;
         }
         if (typeof durum.yuzde === 'number') {
-          sonYuzde = Math.max(sonYuzde, durum.yuzde);
-          modalGoster('Güncelleniyor', durum.mesaj || 'İşlem sürüyor…', sonYuzde);
+          sonYuzde = durum.yuzde;
+          modalGoster('Güncelleniyor', durum.mesaj || 'İşlem sürüyor…', durum.yuzde);
         }
         if (durum.bitti && durum.asama === 'tamam') {
-          guncellemeBitti = true;
-          sonYuzde = 92;
-          modalGoster('Güncelleniyor', 'Sunucu yeniden başlatılıyor…', sonYuzde);
+          sonYuzde = 95;
+          modalGoster('Güncelleniyor', 'Sunucu yeniden başlatılıyor…', 95);
+          break;
         }
       }
 
-      const hazir = await sunucuHazirMi();
-      if (!hazir) {
+      const saglik = await healthKontrol();
+      if (!saglik) {
         sunucuKapandi = true;
-        if (sonYuzde < 45) sonYuzde = 45;
-        modalGoster(
-          'Güncelleniyor',
-          guncellemeBitti ? 'Sunucu yeniden başlatılıyor…' : 'Dosyalar güncelleniyor… Lütfen bekleyin.',
-          sonYuzde
-        );
-        continue;
-      }
-
-      if (sunucuKapandi || guncellemeBitti) {
-        const kurulu = await kuruluSurumOku();
-        const surumUygun = !hedefSurum || !kurulu || kurulu === hedefSurum || surumKarsilastir(kurulu, hedefSurum) >= 0;
-        if (surumUygun) {
-          modalBasarili(kurulu ? `v${kurulu} yüklendi. Sayfa yenileniyor…` : 'Güncelleme tamamlandı. Sayfa yenileniyor…');
-          setTimeout(() => location.reload(), 1200);
-          return;
-        }
-        modalBasarili(`Sunucu hazır (v${kurulu}). Sayfa yenileniyor…`);
-        setTimeout(() => location.reload(), 1200);
-        return;
+        if (sonYuzde < 40) sonYuzde = 40;
+        modalGoster('Güncelleniyor', 'Dosyalar güncelleniyor… Lütfen bekleyin.', sonYuzde);
+      } else if (sunucuKapandi) {
+        try {
+          const surumRes = await fetch('/api/paket-surum', { cache: 'no-store' });
+          const surumData = await surumRes.json();
+          if (surumData.success) {
+            if (!hedefSurum || surumData.surum === hedefSurum) {
+              modalBasarili(`v${surumData.surum} yüklendi. Sayfa yenileniyor…`);
+              setTimeout(() => location.reload(), 1500);
+              return;
+            }
+          }
+        } catch (_) {}
+        modalGoster('Güncelleniyor', 'Sunucu hazırlanıyor…', 95);
       }
     }
 
-    if (await sunucuHazirMi()) {
-      modalBasarili('Sunucu hazır. Sayfa yenileniyor…');
-      setTimeout(() => location.reload(), 1200);
+    if (await healthKontrol()) {
+      modalBasarili('Güncelleme tamamlandı. Sayfa yenileniyor…');
+      setTimeout(() => location.reload(), 1500);
     } else {
-      modalHata('Güncelleme uzun sürdü. baslat.bat çalıştırın, ardından sayfayı yenileyin (F5).');
+      modalHata('Güncelleme uzun sürdü. Birkaç dakika sonra sayfayı yenileyin veya baslat.bat çalıştırın.');
     }
   }
 
@@ -372,30 +342,13 @@
     } catch (_) {}
 
     try {
-      const surumRes = await fetch('/api/paket-surum', { cache: 'no-store' });
+      const surumRes = await fetch('/api/paket-surum');
+      const surumData = await surumRes.json();
       const metin = document.getElementById('paket-surum-metin');
-      if (surumRes.ok) {
-        const surumData = await surumRes.json();
-        if (surumData.success && metin) {
-          metin.textContent = `Sürüm v${surumData.surum}`;
-        }
-      } else if (metin && !metin.textContent.replace(/…/g, '').trim()) {
-        const sj = await fetch('/surum.json', { cache: 'no-store' });
-        if (sj.ok) {
-          const d = await sj.json();
-          if (d.surum || d.version) metin.textContent = `Sürüm v${d.surum || d.version}`;
-        }
+      if (surumData.success && metin) {
+        metin.textContent = `Sürüm v${surumData.surum}`;
       }
-    } catch (_) {
-      try {
-        const metin = document.getElementById('paket-surum-metin');
-        const sj = await fetch('/surum.json', { cache: 'no-store' });
-        if (sj.ok && metin) {
-          const d = await sj.json();
-          if (d.surum || d.version) metin.textContent = `Sürüm v${d.surum || d.version}`;
-        }
-      } catch (_2) {}
-    }
+    } catch (_) {}
 
     surumCikButonuGoster();
 

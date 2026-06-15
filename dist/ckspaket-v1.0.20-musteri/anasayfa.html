@@ -29,31 +29,6 @@
   <img src="tzob-logo.png" alt="TZOB Logo" class="logo" onerror="this.style.display='none'">
   <div class="title" id="kurum-baslik">…</div>
   <div class="subtitle">CKS Paket — Ofis Sistemi</div>
-  <div id="paket-surum-etiket" style="margin-top:6px;font-size:13px;opacity:0.85;"><span id="paket-surum-metin">Sürüm …</span></div>
-  <script>
-  (function () {
-    var el = document.getElementById('paket-surum-metin');
-    if (!el) return;
-    function goster(v) { if (v) el.textContent = 'Sürüm v' + String(v).replace(/^v/i, ''); }
-    function surumJson() {
-      return fetch('/surum.json', { cache: 'no-store' }).then(function (r) {
-        return r.ok ? r.json() : null;
-      });
-    }
-    fetch('/api/paket-surum', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : surumJson(); })
-      .then(function (d) {
-        if (!d) return surumJson();
-        if (d.success && d.surum) { goster(d.surum); return null; }
-        if (d.surum || d.version) { goster(d.surum || d.version); return null; }
-        return surumJson();
-      })
-      .then(function (d) { if (d && (d.surum || d.version)) goster(d.surum || d.version); })
-      .catch(function () {
-        surumJson().then(function (d) { if (d) goster(d.surum || d.version); });
-      });
-  })();
-  </script>
   <div class="user">Hoş geldin, <strong id="isim">Personel</strong></div>
 </div>
 

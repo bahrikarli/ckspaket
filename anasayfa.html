@@ -27,7 +27,7 @@
 
 <div class="header">
   <img src="tzob-logo.png" alt="TZOB Logo" class="logo" onerror="this.style.display='none'">
-  <div class="title">SARAYÖNÜ ZİRAAT ODASI</div>
+  <div class="title" id="kurum-baslik">…</div>
   <div class="subtitle">CKS Paket — Ofis Sistemi</div>
   <div class="user">Hoş geldin, <strong id="isim">Personel</strong></div>
 </div>
@@ -130,7 +130,10 @@
 
 <div class="logout" onclick="cikis()">ÇIKIŞ YAP</div>
 
+<script src="/kurum-baslik.js"></script>
 <script>
+kurumBaslikYukle({ titleSuffix: ' — CKS Paket' });
+
 const token = localStorage.getItem('token');
 if (!token) location.href = '/';
 
@@ -272,5 +275,6 @@ window.onclick = function(event) {
 </script>
 <link rel="stylesheet" href="/mesaj-global.css">
 <script src="/mesaj-global.js" defer></script>
+<script src="/ckspaket-surum-ui.js" defer></script>
 </body>
 </html>

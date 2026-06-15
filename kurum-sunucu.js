@@ -6,7 +6,7 @@ const path = require('path');
 const { kurumGenelOku, htmlKurumEnjekte } = require('./kurum-ayar');
 
 function registerKurumSunucu(app, opts) {
-  const { getPool, gercekKlasor } = opts;
+  const { getPool, gercekKlasor, authenticateToken } = opts;
   if (!app || !getPool || !gercekKlasor) return;
 
   app.get('/api/kurum-genel', async (_req, res) => {
@@ -31,7 +31,7 @@ function registerKurumSunucu(app, opts) {
   app.get('/', (req, res) => indexHtmlGonder(res, ' - Personel Girişi'));
   app.get('/index.html', (req, res) => indexHtmlGonder(res, ' - Personel Girişi'));
 
-  app.get('/anasayfa.html', async (req, res) => {
+  app.get('/anasayfa.html', ...(authenticateToken ? [authenticateToken] : []), async (req, res) => {
     // Oturum: localStorage + /api/me (HTML istegi Bearer tasimaz)
     try {
       const kurum = await kurumGenelOku(getPool);

@@ -13,7 +13,7 @@ const VARSAYILAN = {
   /** Evrak tarama istasyonu / tarayıcı PC IP (isteğe bağlı) */
   evrakTaramaIp: '',
   chromeRobotPort: 9222,
-  taramaKokKlasor: 'C:\\ckspaket\\taramalar',
+  taramaKokKlasor: 'C:\\CKS\\taramalar',
   taramaHavuzAdi: 'ckstaramalar',
   /** Belgenet robot — Kişiye Havale (adın ilk 3 harfi aramada kullanılır) */
   belgenetHavaleKisiAdi: 'BAHRİ KARLI'

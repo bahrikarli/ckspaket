@@ -45,7 +45,8 @@ function senkronYap() {
 function surumArtirVeYaz() {
   const mevcut = mevcutSurumAl(KOK).surum;
   const yeni = surumArtir(mevcut, 'patch');
-  surumYaz(KOK, yeni);
+  const { surumSenkronYaz } = require('./paket-guncelleme');
+  surumSenkronYaz(KOK, yeni, notlar);
   console.log('');
   console.log('Surum:', mevcut, '->', yeni);
   return yeni;

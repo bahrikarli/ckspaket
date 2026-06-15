@@ -11,6 +11,8 @@ const { gitGuncellemeAktifMi, gitPullUygula, gitUzakSurumKontrol, gitKuruluMu, g
 const { koruMu } = require('./guncelleme-koru');
 const { zipAc, kaynakTemizle, zipKaynakBul } = require('./guncelleme-zip');
 
+const KOK = __dirname;
+
 try {
   require('dotenv').config({ path: path.join(KOK, '.env'), quiet: true });
 } catch (_) {}

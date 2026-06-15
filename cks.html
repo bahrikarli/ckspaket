@@ -5418,7 +5418,7 @@ function tanimlarTaramaOzetCiz(detay, durum) {
 function tanimlarTaramaOzetCanli() {
     const anaIp = document.getElementById('swal-ana-ip')?.value?.trim() || '192.168.1.120';
     const port = Number(document.getElementById('swal-ana-port')?.value) || 3000;
-    const kok = document.getElementById('swal-tarama-klasor')?.value?.trim() || 'C:\\ckspaket\\taramalar';
+    const kok = document.getElementById('swal-tarama-klasor')?.value?.trim() || 'C:\\CKS\\taramalar';
     const havuzAd = document.getElementById('swal-tarama-havuz')?.value?.trim() || 'ckstaramalar';
     const yil = new Date().getFullYear();
     const norm = (p) => p.replace(/[\\/]+$/, '');
@@ -5540,7 +5540,7 @@ html: `
             </div>
             <div style="margin-bottom:10px;">
                 <label style="font-weight:bold;color:#555;font-size:12px;">Tarama kök klasörü <span style="font-weight:normal;color:#888;">(sunucudaki ana dizin)</span></label>
-                <input id="swal-tarama-klasor" class="swal2-input" value="${(t.taramaKokKlasor || 'C:\\\\CKS\\\\taramalar').replace(/"/g, '&quot;')}" placeholder="C:\\ckspaket\\taramalar" style="width:100%;margin:0;height:36px;font-size:13px;">
+                <input id="swal-tarama-klasor" class="swal2-input" value="${(t.taramaKokKlasor || 'C:\\\\CKS\\\\taramalar').replace(/"/g, '&quot;')}" placeholder="C:\\CKS\\taramalar" style="width:100%;margin:0;height:36px;font-size:13px;">
             </div>
             <div style="margin-bottom:10px;">
                 <label style="font-weight:bold;color:#555;font-size:12px;">Havuz alt klasör adı <span style="font-weight:normal;color:#888;">(bekleyen PDF’ler — tam yol yukarıda)</span></label>

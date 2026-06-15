@@ -87,9 +87,13 @@ function serverJsPaketYamasi() {
   if (!s.includes('CKSPAKET_MOD')) {
     s = s.replace(
       /} catch \(_\) \{\}\s*\n\s*\nconst express = require\('express'\);/,
-      `} catch (_) {}\n\nconst CKSPAKET_MOD = process.env.CKSPAKET === '1' || /ckspaket/i.test(String(gercekKlasorErken));\nconst CKSPAKET_TARAMA_KOK = path.join(gercekKlasorErken, 'taramalar');\n\nconst express = require('express');`
+      `} catch (_) {}\n\nconst CKSPAKET_MOD = process.env.CKSPAKET === '1' || /ckspaket/i.test(String(gercekKlasorErken));\nconst CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join('C:', 'cks', 'taramalar');\n\nconst express = require('express');`
     );
   }
+  s = s.replace(
+    /const CKSPAKET_TARAMA_KOK = path\.join\(gercekKlasorErken, 'taramalar'\);/,
+    "const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join('C:', 'cks', 'taramalar');"
+  );
 
   s = s.replace(/\n\/\*\* Ana CKS[\s\S]*?function sistemAyarAnaCksUygula\(\) \{[\s\S]*?\n\}\n/g, '\n');
   s = s.replace(/\n  sistemAyarAnaCksUygula\(\);\n/g, '\n');
@@ -116,6 +120,12 @@ async function sistemAyarDbYukle() {`
       '\n  sistemAyarPaketUygula();$1'
     );
   }
+  if (!s.includes('sistemAyarPaketUygula();\n  const json = JSON.stringify(sistemAyarCache);')) {
+    s = s.replace(
+      /(async function sistemAyarDbKaydet\(veri\) \{[\s\S]*?sistemAyarCache = sistemAyarBirlestir\(veri \|\| \{\}\);)/,
+      '$1\n  sistemAyarPaketUygula();'
+    );
+  }
 
   if (!s.includes('ibTaramaKlasorleri')) {
     s = s.replace(
@@ -135,7 +145,7 @@ async function sistemAyarDbYukle() {`
     s = s.replace(
       '// --- BELGENET VE PDF SİSTEMİ ---',
       `// --- BELGENET VE PDF SİSTEMİ ---
-// Paket: /taramalar ckspaket kökünden (ana CKS __dirname static kullanır)
+// Paket: /taramalar ortak CKS havuzundan (C:\\cks\\taramalar)
 app.use('/taramalar', (req, res, next) => {
   const kok = taramaKokYol(sistemAyarAl());
   express.static(kok)(req, res, next);
@@ -245,8 +255,6 @@ function cksHtmlPaketYamasi() {
   s = s.replace(/fetch\('\/api\/belgenet/g, "fetch('/api/belgenet");
   s = s.replace(/t\.anaSunucuPort \|\| 3000/g, 't.anaSunucuPort || 3030');
   s = s.replace(/anaSunucuPort \|\| 3000/g, 'anaSunucuPort || 3030');
-  s = s.replace(/'C:\\\\CKS\\\\taramalar'/g, "'C:\\\\ckspaket\\\\taramalar'");
-  s = s.replace(/C:\\\\CKS\\\\taramalar/g, 'C:\\\\ckspaket\\\\taramalar');
   if (!s.includes('ckspaketM')) {
     s = s.replace(
       /function tanimlarAgYol\(anaIp, kokKlasor, alt\) \{[\s\S]*?return yol;\s*\}/,

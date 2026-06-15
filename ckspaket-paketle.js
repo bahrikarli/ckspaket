@@ -12,9 +12,17 @@ const GUNCELLEME = path.join(KOK, 'guncellemeler');
 
 const argv = process.argv.slice(2);
 const MUSTERI_MOD = argv.includes('--musteri');
-const filtArg = argv.filter((a) => a !== '--musteri');
+const SURUM_ARTIR = argv.includes('--artir');
+const filtArg = argv.filter((a) => a !== '--musteri' && a !== '--artir');
 const notlarArg = filtArg.join(' ').trim();
 const notlar = notlarArg.replace(/^"(.*)"$/, '$1');
+
+const {
+  mevcutSurumAl,
+  surumArtir,
+  surumSenkronYaz,
+  manifestYaz
+} = require('./paket-guncelleme');
 
 const HARIC = new Set([
   'node_modules',
@@ -46,6 +54,13 @@ function okuJson(p) {
 }
 
 function surumAl() {
+  if (SURUM_ARTIR) {
+    const mevcut = mevcutSurumAl(KOK).surum;
+    const yeni = surumArtir(mevcut, 'patch');
+    surumSenkronYaz(KOK, yeni, notlar || `${yeni} müşteri sürümü`);
+    console.log('  Surum artirildi:', mevcut, '->', yeni);
+    return yeni;
+  }
   return okuJson(path.join(KOK, 'package.json')).version;
 }
 
@@ -255,21 +270,15 @@ function zipOlustur(kaynakKlasor, zipYol) {
   execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'inherit' });
 }
 
-function manifestYaz(surum, zipAdi, ip, port) {
+function manifestVeZipKaydet(surum, zipAdi, ip, port) {
   fs.mkdirSync(GUNCELLEME, { recursive: true });
-  const sunucuIp = ip || process.env.CKS_SUNUCU_IP || '127.0.0.1';
-  const sunucuPort = port || process.env.CKS_PORT || process.env.PORT || '3030';
-  const manifest = {
-    surum,
-    tarih: new Date().toISOString().slice(0, 10),
-    notlar: notlar || `${surum} sürüm güncellemesi`,
-    indirmeUrl: `http://${sunucuIp}:${sunucuPort}/guncellemeler/${zipAdi}`
-  };
-  const hedef = path.join(GUNCELLEME, 'guncelleme.json');
-  fs.writeFileSync(hedef, JSON.stringify(manifest, null, 2), 'utf8');
+  fs.copyFileSync(path.join(DIST, zipAdi), path.join(GUNCELLEME, zipAdi));
+  console.log('  OK: guncellemeler/' + zipAdi);
+  manifestYaz(KOK, surum, zipAdi, ip, port, notlar);
   console.log('  OK: guncellemeler/guncelleme.json');
-  return manifest;
 }
+
+// manifestYaz — paket-guncelleme.js uzerinden (manifestVeZipKaydet)
 
 const surum = surumAl();
 const zipAdi = MUSTERI_MOD ? `ckspaket-v${surum}-musteri.zip` : `ckspaket-v${surum}.zip`;
@@ -298,12 +307,7 @@ if (!MUSTERI_MOD) {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-if (!MUSTERI_MOD) {
-  fs.mkdirSync(GUNCELLEME, { recursive: true });
-  fs.copyFileSync(zipYol, path.join(GUNCELLEME, zipAdi));
-  console.log('  OK: guncellemeler/' + zipAdi);
-  manifestYaz(surum, zipAdi, ip, port);
-}
+manifestVeZipKaydet(surum, zipAdi, ip, port);
 
 console.log('');
 console.log('Tamamlandi.');

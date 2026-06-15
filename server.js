@@ -30,7 +30,7 @@ try {
 } catch (_) {}
 
 const CKSPAKET_MOD = process.env.CKSPAKET === '1' || /ckspaket/i.test(String(gercekKlasorErken));
-const CKSPAKET_TARAMA_KOK = path.join(gercekKlasorErken, 'taramalar');
+const CKSPAKET_TARAMA_KOK = process.env.CKS_TARAMA_KOK || path.join('C:', 'cks', 'taramalar');
 
 const express = require('express');
 const cors = require('cors');
@@ -160,6 +160,7 @@ function sistemAyarAl() {
 async function sistemAyarDbKaydet(veri) {
   await ensureTeknikJsonKolon();
   sistemAyarCache = sistemAyarBirlestir(veri || {});
+  sistemAyarPaketUygula();
   const p = await getPool();
   const json = JSON.stringify(sistemAyarCache);
   await p.request()
@@ -1989,7 +1990,7 @@ app.get('/api/belgenet-istatistik', authenticateToken, async (req, res) => {
 });
 
 // --- BELGENET VE PDF SİSTEMİ ---
-// Paket: /taramalar ckspaket kökünden (ana CKS __dirname static kullanır)
+// Paket: /taramalar ortak CKS havuzundan (C:\cks\taramalar)
 app.use('/taramalar', (req, res, next) => {
   const kok = taramaKokYol(sistemAyarAl());
   express.static(kok)(req, res, next);
@@ -5925,47 +5926,95 @@ async function belgenetKonuKoduInputIdBul(frame) {
     });
 }
 
-/** Açılan Konu Kodu listesinden 240.02 / Çiftçi Kayıt Sistemi satırını seç */
-async function belgenetKonuKoduListedenSec(frame) {
+/** Açılan Konu Kodu listesinden 240.02 / Çiftçi Kayıt satırını bul (Puppeteer tıklama için işaretle) */
+async function belgenetKonuKoduListedenTikla(page, frame) {
     const kod = BELGENET_KONU_KODU;
     const yil = String(new Date().getFullYear());
-    const aramaDenemeleri = [
-        [kod, 'Çiftçi Kayıt Sistemi Başvuru'],
-        [kod, 'Çiftçi Kayıt Sistemi'],
-        [yil, kod, 'Başvuru'],
-        [kod]
-    ];
-    for (const parcalar of aramaDenemeleri) {
-        if (await belgenetLovListedenSec(frame, parcalar)) return true;
-    }
-    return frame.evaluate((k) => {
+
+    await frame.evaluate(() => {
+        document.querySelector('[data-cks-konu-hedef]')?.removeAttribute('data-cks-konu-hedef');
+    }).catch(() => {});
+
+    const hedefMetin = await frame.evaluate((kodStr, yilStr) => {
         const gorunur = (el) => {
             if (!el) return false;
             const st = getComputedStyle(el);
             const r = el.getBoundingClientRect();
-            return st.display !== 'none' && st.visibility !== 'hidden' && r.width > 8 && r.height > 8;
+            return st.display !== 'none' && st.visibility !== 'hidden' &&
+                r.width > 8 && r.height > 8 && el.offsetParent !== null;
         };
+        const kodU = kodStr.toLocaleUpperCase('tr-TR');
+
+        const satirMetni = (el) => {
+            const satir = el.closest('li.ui-autocomplete-item, li, tr, div.ui-autocomplete-item, .ui-lov-item') || el;
+            return (satir.innerText || satir.textContent || el.innerText || el.textContent || '')
+                .replace(/\s+/g, ' ').trim().toLocaleUpperCase('tr-TR');
+        };
+
         const adaylar = [];
-        for (const p of document.querySelectorAll('.ui-autocomplete-panel, .ui-autocomplete-items, .ui-lov-panel, .ui-dialog')) {
-            if (!gorunur(p)) continue;
-            adaylar.push(...p.querySelectorAll('li.ui-autocomplete-item, tr.ui-widget-content, .ui-lov-table tr'));
+        for (const sel of [
+            '.lovItemTitle', '.lovItemDetail', 'li.ui-autocomplete-item',
+            '.ui-autocomplete-item', 'tr.ui-widget-content', '.ui-lov-table tr',
+            '.ui-autocomplete-panel li', '.ui-lov-panel li'
+        ]) {
+            for (const el of document.querySelectorAll(sel)) {
+                if (gorunur(el)) adaylar.push(el);
+            }
         }
-        const hedef = adaylar.find((el) => {
-            if (!gorunur(el)) return false;
-            const txt = (el.innerText || el.textContent || '').toLocaleUpperCase('tr-TR');
-            return txt.includes(k.toLocaleUpperCase('tr-TR')) &&
-                (txt.includes('ÇIFTÇI') || txt.includes('CIFTCI')) &&
-                txt.includes('KAYIT');
-        }) || adaylar.find((el) => gorunur(el) && (el.innerText || '').includes(k));
-        if (!hedef) return false;
-        const tikla = hedef.closest('li.ui-autocomplete-item, tr, li') || hedef;
-        tikla.scrollIntoView({ block: 'center' });
-        tikla.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
-        tikla.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
-        tikla.click();
-        tikla.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
-        return true;
-    }, kod);
+        for (const title of document.querySelectorAll('.lovItemTitle')) {
+            if (!gorunur(title)) continue;
+            const satir = title.closest('li, tr, div.ui-autocomplete-item') || title.parentElement;
+            if (satir && gorunur(satir)) adaylar.push(satir);
+        }
+
+        const esles = (el) => {
+            const txt = satirMetni(el);
+            if (!txt.includes(kodU)) return false;
+            return (txt.includes('ÇIFTÇI') || txt.includes('CIFTCI')) &&
+                (txt.includes('KAYIT') || txt.includes('BAŞVURU') || txt.includes('BASVURU') || txt.includes(yilStr));
+        };
+
+        let hedef = adaylar.find(esles);
+        if (!hedef) {
+            hedef = adaylar.find((el) => satirMetni(el).includes(kodU));
+        }
+        if (!hedef) return null;
+
+        const tikla = hedef.closest('li.ui-autocomplete-item, li, tr, div.ui-autocomplete-item') || hedef;
+        tikla.setAttribute('data-cks-konu-hedef', '1');
+        return (tikla.innerText || tikla.textContent || '').trim().substring(0, 120);
+    }, kod, yil);
+
+    if (!hedefMetin) return false;
+
+    const handle = await frame.$('[data-cks-konu-hedef="1"]');
+    if (handle) {
+        try {
+            await handle.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+            await handle.click({ delay: 120 });
+        } catch (_) {
+            try {
+                const box = await handle.boundingBox();
+                if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+            } catch (_) { /* yoksay */ }
+        } finally {
+            await handle.dispose().catch(() => {});
+        }
+    } else {
+        return false;
+    }
+
+    await frame.evaluate(() => {
+        document.querySelector('[data-cks-konu-hedef="1"]')?.removeAttribute('data-cks-konu-hedef');
+    }).catch(() => {});
+
+    console.log(`✅ Konu Kodu satırı tıklandı: ${hedefMetin}`);
+    return true;
+}
+
+/** @deprecated belgenetKonuKoduListedenTikla kullanın */
+async function belgenetKonuKoduListedenSec(frame) {
+    return belgenetKonuKoduListedenTikla(null, frame).catch(() => false);
 }
 
 /** Konu Kodu alanına BELGENET_KONU_KODU (240.02) yazar ve listeden seçer */
@@ -5984,19 +6033,27 @@ async function belgenetKonuKoduDoldur(page, targetFrame) {
         return false;
     }
 
-    await alanTemizleVeYaz(page, targetFrame, inputId, kod);
-    await targetFrame.evaluate((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown' }));
-        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'ArrowDown' }));
-    }, inputId);
+    const sel = `[id="${String(inputId).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+    try {
+        await targetFrame.focus(sel);
+    } catch (_) {
+        await targetFrame.click(sel).catch(() => {});
+    }
+    await belgenetBekle(500);
+    await page.keyboard.down('Control');
+    await page.keyboard.press('A');
+    await page.keyboard.up('Control');
+    await page.keyboard.press('Backspace');
+    await belgenetBekle(300);
+    console.log(`⌨️ Konu Kodu yazılıyor: ${kod}`);
+    await page.keyboard.type(kod, { delay: 220 });
+    await belgenetBekle(800);
 
-    console.log('⏳ Konu Kodu listesi bekleniyor...');
+    console.log('⏳ Konu Kodu listesi bekleniyor (açılan satıra tıklanacak)...');
     let konuTiklandiMi = false;
-    for (let deneme = 1; deneme <= 6; deneme++) {
-        await belgenetBekle(deneme === 1 ? 2500 : 1000);
-        if (await belgenetKonuKoduListedenSec(targetFrame)) {
+    for (let deneme = 1; deneme <= 12; deneme++) {
+        await belgenetBekle(deneme === 1 ? 2000 : 1500);
+        if (await belgenetKonuKoduListedenTikla(page, targetFrame)) {
             konuTiklandiMi = true;
             console.log(`✅ Konu Kodu listeden seçildi (${deneme}. deneme)`);
             break;

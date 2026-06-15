@@ -8,7 +8,8 @@ echo ========================================
 echo   MUSTERI SURUM PAKETI
 echo ========================================
 echo.
-echo Surum: package.json icindeki version (simdiki paket)
+echo Surum: otomatik artirilir (1.0.12 -^> 1.0.13)
+echo         package.json + surum.json + guncelleme.json guncellenir
 echo.
 echo Olusturulacak:
 echo   dist\ckspaket-vX.X.X-musteri\   ^<- C:\ckspaket'e kopyalanir
@@ -20,9 +21,9 @@ echo.
 set /p NOTLAR=Surum notu (Enter = bos): 
 
 if "%NOTLAR%"=="" (
-  node ckspaket-paketle.js --musteri
+  node ckspaket-paketle.js --musteri --artir
 ) else (
-  node ckspaket-paketle.js --musteri %NOTLAR%
+  node ckspaket-paketle.js --musteri --artir %NOTLAR%
 )
 
 echo.

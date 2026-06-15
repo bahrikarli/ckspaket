@@ -1,0 +1,36 @@
+CKS PAKET v1.0.12 — Musteri Kurulum
+================================
+
+KURULUM (ilk kez)
+-----------------
+1. SQL Server 2022 Express kurun (MUSTERI-SQL-KURULUM.txt)
+2. Bu klasoru C:\ckspaket olarak kopyalayin
+3. ckspaketdata-musteri-kur.bat  (veritabani — localhost)
+4. MUSTERI-KUR.bat               (npm + sunucu)
+
+Tarayici: http://127.0.0.1:3030
+
+SQL (.env):
+  DB_SERVER=localhost
+  DB_USER=sa
+  DB_PASS=189189
+  DB_NAME=ckspaketdata
+
+GUNCELLEME
+----------
+ckspaket-musteri-guncelle.bat  (tek tik — otomatik gunceller)
+
+PROGRAM
+-------
+baslat.bat   (cift tik — sunucu arka planda + tarayici acilir)
+durdur.bat   (sunucuyu kapatir)
+
+Masaustunde "CKS Paket" kisayolu olusur (buğday ikonu).
+
+NOTLAR
+------
+DSFSDF
+Surum: v1.0.12
+Tarih: 2026-06-15
+
+Destek: Sarayonu Ziraat Odasi — CKS Paket

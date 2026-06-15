@@ -5200,9 +5200,6 @@ console.log("⏰ Yedekleme sistemi server.js üzerinde aktif edildi.");
 // 🤖 ÇKS - BELGENET TAM OTOMASYON ROBOTU
 // =================================================================
 
-/** Belgenet standart dosya planı — konu kodu (autocomplete'te çıkan seçenek) */
-const BELGENET_KONU_KODU = '240.02';
-
 // Fonksiyona 3. parametre olarak 'dosya' ekledik
 
 
@@ -6866,9 +6863,9 @@ app.post('/api/belgenet-yukle', async (req, res) => {
         await belgenetBekle(1000);
 
         // =========================================================
-        // 🎯 KONU KODU (240.02) - GÜVENLİ VE YEDEK PLANLI
+        // 🎯 KONU KODU (245) - GÜVENLİ VE YEDEK PLANLI
         // =========================================================
-        console.log(`📋 Konu Kodu (${BELGENET_KONU_KODU}) giriliyor...`);
+        console.log("📋 Konu Kodu (245) giriliyor...");
         const konuKoduKutuId = await targetFrame.evaluate(() => {
             const inputs = Array.from(document.querySelectorAll('input[type="text"]'));
             const input = inputs.find(el => el.id && (el.id.includes('konuKodu') || el.id.includes('standartDosyaPlani') || el.id.includes('kod')));
@@ -6879,23 +6876,20 @@ app.post('/api/belgenet-yukle', async (req, res) => {
         if (konuKoduKutuId) {
             await targetFrame.focus(`[id="${konuKoduKutuId}"]`);
             await belgenetBekle(500);
-            await page.keyboard.type(BELGENET_KONU_KODU, { delay: 280 }); 
+            await page.keyboard.type('245', { delay: 280 }); 
             
             console.log("⏳ Konu Kodu listesi bekleniyor (3 sn)...");
             await belgenetBekle(3000); 
             
-            const konuTiklandiMi = await targetFrame.evaluate((kod) => {
+            const konuTiklandiMi = await targetFrame.evaluate(() => {
                 const basliklar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
-                const hedef = basliklar.find(el => {
-                    const t = el.innerText || '';
-                    return el.offsetParent !== null && (t.includes(kod) || t.includes('Çiftçi Kayıt Sistemi'));
-                });
+                const hedef = basliklar.find(el => (el.innerText.includes('Çiftçi Kayıt Sistemi') || el.innerText.includes('245')) && el.offsetParent !== null);
                 if (hedef) {
                     hedef.click();
                     return true; 
                 }
                 return false; 
-            }, BELGENET_KONU_KODU);
+            });
 
             if (!konuTiklandiMi) {
                 console.log("⚠️ Konu menüsü tıklanamadı, B Planı (Klavye) devreye giriyor...");
@@ -7799,7 +7793,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
         }
         await belgenetBekle(1000);
 
-        // 📋 KONU KODU (240.02)
+        // 📋 KONU KODU (245)
         const konuKoduKutuId = await targetFrame.evaluate(() => {
             const inputs = Array.from(document.querySelectorAll('input[type="text"]'));
             const input = inputs.find(el => el.id && (el.id.includes('konuKodu') || el.id.includes('standartDosyaPlani')));
@@ -7807,15 +7801,12 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
         });
         if (konuKoduKutuId) {
             await targetFrame.focus(`[id="${konuKoduKutuId}"]`); await belgenetBekle(500);
-            await page.keyboard.type(BELGENET_KONU_KODU, { delay: 280 }); await belgenetBekle(3000); 
-            const sec = await targetFrame.evaluate((kod) => {
+            await page.keyboard.type('245', { delay: 280 }); await belgenetBekle(3000); 
+            const sec = await targetFrame.evaluate(() => {
                 const basliklar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
-                const h = basliklar.find(el => {
-                    const t = el.innerText || '';
-                    return el.offsetParent !== null && (t.includes(kod) || t.includes('Çiftçi Kayıt Sistemi'));
-                });
+                const h = basliklar.find(el => (el.innerText.includes('Çiftçi Kayıt Sistemi') || el.innerText.includes('245')) && el.offsetParent !== null);
                 if (h) { h.click(); return true; } return false; 
-            }, BELGENET_KONU_KODU);
+            });
             if (!sec) { await page.keyboard.press('ArrowDown'); await belgenetBekle(700); await page.keyboard.press('Enter'); }
         }
         await belgenetBekle(1500);

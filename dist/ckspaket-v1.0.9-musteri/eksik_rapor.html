@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Eksikler Listesi</title>
+<style>
+  body {font-family:Arial,sans-serif;background:#f4f4f9;margin:0;padding:20px}
+  .kutu {max-width:1100px;margin:auto;background:white;padding:40px;border-radius:12px;box-shadow:0 6px 25px rgba(0,0,0,0.1)}
+  h2 {font-size:26px;color:#006400;margin-bottom:30px}
+  .giris {display:flex;gap:15px;margin-bottom:30px;align-items:center}
+  .giris input {flex:1;padding:14px;font-size:16px;border:2px solid #006400;border-radius:8px}
+  .giris button {padding:14px 40px;background:#006400;color:white;border:none;border-radius:8px;font-size:18px;font-weight:bold;cursor:pointer}
+  .giris button:hover {background:#228B22}
+  table {width:100%;border-collapse:collapse}
+  th {background:#006400;color:white;padding:16px;text-align:center;font-size:17px}
+  td {padding:14px;border-bottom:1px solid #ddd;text-align:left}
+  .durum-eksik {color:#c62828;font-weight:bold}
+  .durum-tamam {color:#2e7d32;font-weight:bold}
+  .sil {background:#c62828;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer}
+  .sil:hover {background:#a00}
+  .bos {text-align:center;color:#666;padding:40px;font-size:18px}
+  tr:hover {background:#f8f9fa;cursor:pointer}
+  tr[data-id]:hover td {background:#e8f5e8}
+</style>
+</head>
+<body>
+
+<div class="kutu">
+  <h2>Eksikleri Giriniz :</h2>
+
+  <div class="giris">
+    <input type="text" id="yeniEksik" placeholder="Eksik açıklamasını yazın...">
+    <button onclick="eksikEkle()">Ekle</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Eksikler</th>
+        <th>Tarih</th>
+        <th>Durum</th>
+        <th>İşlem</th>
+      </tr>
+    </thead>
+    <tbody id="liste">
+      <tr><td colspan="4" class="bos">Yükleniyor...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DÜZENLEME MODALI -->
+<div id="duzenleModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:99999;justify-content:center;align-items:center;">
+  <div style="background:white;padding:30px;border-radius:12px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,0.3);position:relative;">
+    <span onclick="kapatModal()" style="position:absolute;top:10px;right:15px;font-size:30px;cursor:pointer;color:#c62828;">×</span>
+    <h3 style="color:#006400;margin-bottom:20px;">Eksik Düzenle</h3>
+    <input type="text" id="duzenleInput" style="width:100%;padding:12px;font-size:16px;border:2px solid #006400;border-radius:8px;margin-bottom:20px;" autofocus>
+    <select id="duzenleDurum" style="width:100%;padding:12px;font-size:16px;border:2px solid #006400;border-radius:8px;margin-bottom:20px;">
+      <option value="">- Durum Seçiniz -</option>
+      <option value="EKSİK">EKSİK</option>
+      <option value="TAMAMLANDI">TAMAMLANDI</option>
+    </select>
+    <div style="text-align:right;">
+      <button onclick="duzenleKaydet()" style="padding:12px 30px;background:#006400;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;">Kaydet</button>
+      <button onclick="kapatModal()" style="padding:12px 30px;background:#ccc;color:#333;border:none;border-radius:8px;margin-left:10px;cursor:pointer;">İptal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 1. DÜZENLEME MODALINI AÇAN FONKSİYON (HER YERDEN ERİŞİLEBİLİR)
+window.duzenleAc = function(id, metin, durum) {
+    console.log("DuzenleAc tetiklendi! ID:", id);
+    window.duzenlenenId = id; // Global değişkene ata
+    
+    const input = document.getElementById('duzenleInput');
+    const select = document.getElementById('duzenleDurum');
+    const modal = document.getElementById('duzenleModal');
+
+    if (input) input.value = metin;
+    if (select) select.value = durum ? durum.trim().toUpperCase() : "";
+    if (modal) modal.style.display = 'flex';
+};
+
+// 2. KAYDETME FONKSİYONU
+window.duzenleKaydet = async function() {
+    const yeniEksik = document.getElementById('duzenleInput').value.trim();
+    const yeniDurum = document.getElementById('duzenleDurum').value;
+
+    if (!window.duzenlenenId) return alert("Hata: Düzenlenecek ID bulunamadı.");
+
+    try {
+        const res = await fetch(`/api/eksik-duzenlee/${window.duzenlenenId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify({ eksikler: yeniEksik, durum: yeniDurum })
+        });
+
+        if (res.ok) {
+            document.getElementById('duzenleModal').style.display = 'none';
+            yukle(); // Listeyi tazele
+        } else {
+            alert("Güncelleme sırasında hata oluştu.");
+        }
+    } catch (err) {
+        console.error(err);
+    }
+};
+const urlParams = new URLSearchParams(window.location.search);
+const kimlikid = urlParams.get('kimlik');
+
+if (!kimlikid) {
+  document.body.innerHTML = "<h2 style='text-align:center;color:red;'>Çiftçi kimlik bilgisi bulunamadı!</h2>";
+  throw new Error("Kimlik yok");
+}
+
+const token = localStorage.getItem('token');
+let currentUserName = "Personel";
+
+// Kullanıcı adını çek
+fetch('/api/me', { 
+  headers: { Authorization: 'Bearer ' + token } 
+})
+  .then(r => r.json())
+  .then(d => {
+    if (d.success && d.user) {
+      currentUserName = (d.user.ad + ' ' + d.user.soyad).trim() || d.user.kullaniciadi || 'Personel';
+    }
+  })
+  .catch(() => console.warn("Kullanıcı adı alınamadı"));
+
+async function eksikEkle() {
+  const input = document.getElementById('yeniEksik');
+  const eksik = input.value.trim();
+  if (!eksik) return alert("Eksik açıklaması boş olamaz!");
+
+  try {
+    const res = await fetch('/api/eksik-ekle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        kimlikid: kimlikid,
+        eksikler: eksik,
+        kullanici: currentUserName
+      })
+    });
+
+    if (res.ok) {
+      input.value = '';
+      yukle();
+    } else {
+      const err = await res.json();
+      alert("Ekleme başarısız: " + (err.message || "Bilinmeyen hata"));
+    }
+  } catch (err) {
+    alert("Sunucu bağlantı hatası!");
+  }
+}
+
+async function yukle() {
+  const tbody = document.getElementById('liste');
+  tbody.innerHTML = '<tr><td colspan="4" class="bos">Yükleniyor...</td></tr>';
+
+  try {
+    const res = await fetch(`/api/eksik-liste?kimlikid=${kimlikid}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    if (!res.ok) throw new Error("Liste alınamadı");
+
+    const data = await res.json();
+    tbody.innerHTML = '';
+
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="bos">Henüz eksik kaydı yok.</td></tr>';
+      return;
+    }
+
+    data.forEach(e => {
+    const satirId = e.Kimlik || e.Id;
+    const eksikMetni = e.eksikler || "";
+    const durumMetni = e.durum || "EKSİK";
+    const tarih = new Date(e.tarih).toLocaleDateString('tr-TR');
+
+    const tr = document.createElement('tr');
+    tr.style.cursor = "pointer";
+    tr.title = "Düzenlemek için çift tıklayın";
+
+    // ÇİFT TIKLAMA OLAYI
+    tr.addEventListener('dblclick', () => {
+        window.duzenleAc(satirId, eksikMetni, durumMetni);
+    });
+
+    tr.innerHTML = `
+        <td>${eksikMetni}</td>
+        <td>${tarih}</td>
+        <td><strong>${durumMetni}</strong></td>
+        <td>
+            <button class="sil" onclick="event.stopPropagation(); eksikSil(${satirId})">SİL</button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+});
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = '<tr><td colspan="4" class="bos">Veriler yüklenemedi.</td></tr>';
+  }
+}
+
+async function eksikSil(id) {
+  if (!confirm('Bu eksik kalıcı olarak silinsin mi?')) return;
+
+  try {
+    const res = await fetch(`/api/eksik-sil/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+
+    if (res.ok) {
+      yukle();
+    } else {
+      alert("Silme başarısız!");
+    }
+  } catch (err) {
+    alert("Silme hatası!");
+  }
+}
+
+let duzenlenenId = null;
+
+function duzenleAc(id, metin, durum) {
+    console.log("Düzenleme Modalı Açılıyor. ID:", id);
+    
+    duzenlenenId = id;
+    document.getElementById('duzenleInput').value = metin;
+    
+    const select = document.getElementById('duzenleDurum');
+    if (select) {
+        select.value = durum;
+    }
+    
+    // Modalı görünür yap
+    const modal = document.getElementById('duzenleModal');
+    modal.style.display = 'flex';
+}
+
+async function duzenleKaydet() {
+    const yeniEksik = document.getElementById('duzenleInput').value.trim();
+    const yeniDurum = document.getElementById('duzenleDurum').value;
+
+    if (!yeniEksik) {
+        alert("Eksik açıklaması boş olamaz!");
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert("Oturum kapalı!");
+        return;
+    }
+
+    try {
+        // ROTA ADI GÜNCELLENDİ: /api/eksik-duzenlee/
+        const res = await fetch(`/api/eksik-duzenlee/${duzenlenenId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ 
+                eksikler: yeniEksik,
+                durum: yeniDurum 
+            })
+        });
+
+        if (res.ok) {
+            alert("✅ Kayıt güncellendi.");
+            document.getElementById('duzenleModal').style.display = 'none';
+            yukle(); // Listeyi yenile
+        } else {
+            const hata = await res.json();
+            alert("❌ Düzenleme başarısız: " + (hata.error || "Sunucu hatası"));
+        }
+    } catch (err) {
+        console.error("Hata:", err);
+        alert("Bağlantı hatası oluştu!");
+    }
+}
+function kapatModal() {
+  document.getElementById('duzenleModal').style.display = 'none';
+  duzenlenenId = null;
+}
+
+// ESC ile modal kapatma
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') kapatModal();
+});
+// TEST: Herhangi bir satıra tıklayınca çalışsın mı diye
+document.addEventListener('click', function(e) {
+  if (e.target.closest('tr[data-id]')) {
+    console.log('Satıra TIKLANDI! ID:', e.target.closest('tr').dataset.id);
+  }
+});
+// Sayfa yüklendiğinde listeyi getir
+yukle();
+</script>
+</body>
+</html>

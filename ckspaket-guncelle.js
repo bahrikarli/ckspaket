@@ -35,7 +35,9 @@ const KOPYALA = [
   'cks_istatistik.html',
   'bilgi.html',
   'tarim-rehber.js',
-  'tarim-rehber.html'
+  'tarim-rehber.html',
+  'tarama-havuz-ui.js',
+  'personel-pdf-havuz.html'
 ];
 
 const KORU = new Set([
@@ -397,6 +399,22 @@ function portDogrulama() {
   }
   if (!/database: process\.env\.DB_NAME \|\| 'demoanaa'/.test(srv)) {
     hatalar.push('server.js: dbConfig demoanaa (.env) kullanmali');
+  }
+  if (!srv.includes("app.get('/api/tarama-havuz-listesi'")) {
+    hatalar.push('server.js: /api/tarama-havuz-listesi eksik');
+  }
+  if (!srv.includes('havuzPdfKullaniciyaAit')) {
+    hatalar.push('server.js: havuz kullanici eslestirme eksik');
+  }
+  if (!fs.existsSync(path.join(HEDEF, 'tarama-havuz-ui.js'))) {
+    hatalar.push('tarama-havuz-ui.js eksik');
+  }
+  if (!fs.existsSync(path.join(HEDEF, 'personel-pdf-havuz.html'))) {
+    hatalar.push('personel-pdf-havuz.html eksik');
+  }
+  const dilekce = oku(path.join(HEDEF, 'dilekce.html'));
+  if (!dilekce.includes('tarama-havuz-ui.js') || !dilekce.includes('taramaHavuzDosyaSec')) {
+    hatalar.push('dilekce.html: tarama havuz secim UI entegre degil');
   }
   if (hatalar.length) {
     console.error('\nPORT DOGRULAMA HATASI (ckspaket 3030):');

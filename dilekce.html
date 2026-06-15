@@ -247,6 +247,8 @@
 .arsiv-bilgi-kutu { background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:16px; text-align:center; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="tarama-havuz-ui.js"></script>
+<script src="/kurum-ayar-client.js"></script>
 </head>
 
 <body>
@@ -1543,7 +1545,7 @@ async function openCiftciGuncelleModal() {
         // -----------------------------------------------
 
         // Adresi parçala (Örn: "SARAYÖNÜ / KARATEPE")
-        let mevcutIl = "KONYA"; // Varsayılan
+        let mevcutIl = typeof kurumIlBuyuk === 'function' ? kurumIlBuyuk() : "KONYA";
         let mevcutIlce = "";
         let mevcutKoy = "";
         
@@ -1870,6 +1872,9 @@ async function yeniTaramaKaydiOlustur() {
 
     if (!onay.isConfirmed) return;
 
+    const havuzDosya = await taramaHavuzDosyaSec({ loading: true });
+    if (!havuzDosya) return;
+
     // 3. Bekleme Ekranı
     Swal.fire({
         title: 'İşlem Yapılıyor...',
@@ -1888,7 +1893,8 @@ async function yeniTaramaKaydiOlustur() {
             // 4. KRİTİK: Yıl bilgisini pakete ekleyip gönderiyoruz
             body: JSON.stringify({ 
                 kimlikid: kimlik,
-                yil: aktifYil 
+                yil: aktifYil,
+                havuzDosya
             }) 
         });
         

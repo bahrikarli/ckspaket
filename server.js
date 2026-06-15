@@ -280,6 +280,7 @@ app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.joi
 app.get('/dashboard.html', authenticateToken, sadeceAdmin, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/mesajlar.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesajlar.html')));
 app.get('/profil.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'profil.html')));
+app.get('/personel-pdf-havuz.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'personel-pdf-havuz.html')));
 app.get('/cks.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'cks.html')));
 app.get('/mesai-kart.html', authenticateToken, sadeceAdminSayfa, (req, res) => {
   const dosya = path.join(__dirname, 'mesai-kart.html');
@@ -1169,7 +1170,6 @@ app.get('/api/MAHALLE', async (req, res) => {
     res.json([]);
   }
 });
-
 // authenticateToken KALDIRILDI → TC GÜNCELLEME HERKES YAPABİLİR (ÇKS'DE GEREK YOK)
 app.post('/api/tc-guncelle', async (req, res) => {
   try {
@@ -2014,6 +2014,10 @@ function pdfArsivKokAdaylari() {
 function pdfArsivDosyaBul(dosyaAdi) {
     const ad = decodeURIComponent(String(dosyaAdi || '').trim());
     if (!ad) return null;
+    try {
+        const havuzDosya = path.join(taramaHavuzYol(sistemAyarAl()), ad);
+        if (fs.existsSync(havuzDosya)) return havuzDosya;
+    } catch (_) {}
     for (const kok of pdfArsivKokAdaylari()) {
         try {
             const altKlasorler = fs.readdirSync(kok).filter((file) =>
@@ -2161,12 +2165,168 @@ async function belgenetSonrakiDosyaAdiOlustur(pool, kimlikid, aktifYil, dilekçe
     return `${prefix}EK-${durum.maxEk + 1}-${gecerliKimlikNo}`;
 }
 
+function kullaniciTaramaOnEkleri(user) {
+    return [...new Set(
+        [user?.kullaniciadi, user?.ad, user?.KullaniciAdi, user?.Ad]
+            .map((s) => String(s || '').trim())
+            .filter(Boolean)
+    )];
+}
+
+function trKucukMetin(s) {
+    try { return String(s).toLocaleLowerCase('tr-TR'); } catch (_) { return String(s).toLowerCase(); }
+}
+
+function havuzPdfKullaniciyaAit(dosyaAdi, user) {
+    if (!/\.pdf$/i.test(dosyaAdi)) return false;
+    const dosya = trKucukMetin(dosyaAdi);
+    return kullaniciTaramaOnEkleri(user).some((onEk) => dosya.startsWith(trKucukMetin(onEk)));
+}
+
+function havuzEnYeniKullaniciPdf(dosyalar, havuzYol, user) {
+    let secilen = null;
+    let enYeni = 0;
+    for (const f of dosyalar) {
+        if (!havuzPdfKullaniciyaAit(f, user)) continue;
+        try {
+            const mt = fs.statSync(path.join(havuzYol, f)).mtimeMs;
+            if (!secilen || mt > enYeni) { secilen = f; enYeni = mt; }
+        } catch (_) {
+            if (!secilen) secilen = f;
+        }
+    }
+    return secilen;
+}
+
+function havuzKullaniciPdfListesi(dosyalar, havuzYol, user) {
+    const liste = [];
+    for (const f of dosyalar) {
+        if (!havuzPdfKullaniciyaAit(f, user)) continue;
+        try {
+            const fp = path.join(havuzYol, f);
+            const st = fs.statSync(fp);
+            liste.push({ dosya: f, mtime: st.mtimeMs, boyut: st.size });
+        } catch (_) { /* atla */ }
+    }
+    return liste.sort((a, b) => b.mtime - a.mtime);
+}
+
+async function pdfIlkSayfaOnizleme(pdfYol) {
+    const dataBuffer = fs.readFileSync(pdfYol);
+    const pdfDoc = await PDFDocument.load(dataBuffer, { ignoreEncryption: true });
+    const sayfa = pdfDoc.getPageCount();
+    const previewDoc = await PDFDocument.create();
+    const [firstPage] = await previewDoc.copyPages(pdfDoc, [0]);
+    previewDoc.addPage(firstPage);
+    const onizleme = await previewDoc.saveAsBase64({ dataUri: true });
+    return { onizleme, sayfa };
+}
+
+async function pdfSayfaSayisiOku(pdfYol) {
+    try {
+        const dataBuffer = fs.readFileSync(pdfYol);
+        const pdfDoc = await PDFDocument.load(dataBuffer, { ignoreEncryption: true });
+        return pdfDoc.getPageCount();
+    } catch (_) {
+        return 0;
+    }
+}
+
+app.get('/api/tarama-havuz-pdf/:dosya', authenticateToken, (req, res) => {
+    try {
+        const guvenli = path.basename(decodeURIComponent(req.params.dosya || ''));
+        if (!guvenli || !havuzPdfKullaniciyaAit(guvenli, req.user)) {
+            return res.status(403).json({ success: false, message: 'Bu dosyaya erişim yok.' });
+        }
+        const havuz = taramaHavuzYol(sistemAyarAl());
+        const fp = path.join(havuz, guvenli);
+        if (!fs.existsSync(fp)) {
+            return res.status(404).json({ success: false, message: 'Dosya bulunamadı.' });
+        }
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${guvenli.replace(/"/g, '')}"`);
+        fs.createReadStream(fp).pipe(res);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/tarama-havuz-listesi', authenticateToken, async (req, res) => {
+    try {
+        const sa = sistemAyarAl();
+        const havuz = taramaHavuzYol(sa);
+        if (!fs.existsSync(havuz)) fs.mkdirSync(havuz, { recursive: true });
+
+        const dosyalar = fs.readdirSync(havuz);
+        const liste = havuzKullaniciPdfListesi(dosyalar, havuz, req.user);
+        const onEkler = kullaniciTaramaOnEkleri(req.user);
+
+        if (!liste.length) {
+            const ornek = onEkler[0] || 'kullaniciadi';
+            return res.json({
+                success: false,
+                message: `ORTAK HAVUZDA İSMİNİZE AİT PDF YOK! Dosya adı şunlardan biriyle başlamalı: ${onEkler.join(', ') || 'kullaniciadi'} (ör. ${ornek}.pdf). Havuz: ${havuz}`,
+                dosyalar: []
+            });
+        }
+
+        const sonuc = [];
+        const tumListe = req.query.tum === '1' || req.query.tum === 'true';
+        const kaynak = tumListe ? liste : liste.slice(0, 12);
+        for (const item of kaynak) {
+            const fp = path.join(havuz, item.dosya);
+            const sayfa = await pdfSayfaSayisiOku(fp);
+            sonuc.push({
+                dosya: item.dosya,
+                tarih: new Date(item.mtime).toLocaleString('tr-TR'),
+                mtime: item.mtime,
+                boyutKb: Math.round(item.boyut / 1024),
+                sayfa,
+                onizlemeUrl: `/pdf-arsivi/${encodeURIComponent(item.dosya)}`
+            });
+        }
+
+        return res.json({
+            success: true,
+            havuzYol: havuz,
+            havuzAdi: sa.taramaHavuzAdi || 'ckstaramalar',
+            onEkler,
+            toplam: liste.length,
+            dosyalar: sonuc
+        });
+    } catch (err) {
+        console.error('tarama-havuz-listesi:', err.message);
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/tarama-havuz-pdf/:dosya', authenticateToken, (req, res) => {
+    try {
+        const guvenli = path.basename(decodeURIComponent(req.params.dosya || ''));
+        if (!guvenli || !/\.pdf$/i.test(guvenli)) {
+            return res.status(400).json({ success: false, message: 'Geçersiz dosya adı.' });
+        }
+        if (!havuzPdfKullaniciyaAit(guvenli, req.user)) {
+            return res.status(403).json({ success: false, message: 'Bu dosyayı silme yetkiniz yok.' });
+        }
+        const havuz = taramaHavuzYol(sistemAyarAl());
+        const fp = path.join(havuz, guvenli);
+        if (!fs.existsSync(fp)) {
+            return res.status(404).json({ success: false, message: 'Dosya bulunamadı.' });
+        }
+        fs.unlinkSync(fp);
+        res.json({ success: true, message: 'PDF silindi.' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
-    const { kimlikid, yil } = req.body; 
+    const { kimlikid, yil, havuzDosya } = req.body;
     
     // 1. ZIRHLI KULLANICI KONTROLÜ (Trim hatasını kökten çözer)
     const kullanici = req.user ? (req.user.ad + ' ' + req.user.soyad).trim() : 'Sistem';
-    const kullaniciAdi = (req.user && req.user.ad) ? req.user.ad.trim() : "Robot";
+    const taramaOnEkleri = kullaniciTaramaOnEkleri(req.user);
 
     try {
         const pool = await getPool();
@@ -2204,14 +2364,35 @@ app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {
         if (!fs.existsSync(HEDEF_KLASOR)) fs.mkdirSync(HEDEF_KLASOR, { recursive: true });
 
         const dosyalar = fs.readdirSync(TARAMA_HAVUZU);
-        let taramaDosyasi = dosyalar.find(f => 
-            f.toLowerCase().startsWith(kullaniciAdi.toLowerCase()) && f.endsWith('.pdf')
-        );
+        const kullaniciListesi = havuzKullaniciPdfListesi(dosyalar, TARAMA_HAVUZU, req.user);
+        let taramaDosyasi = null;
+
+        if (havuzDosya) {
+            const guvenli = path.basename(String(havuzDosya));
+            if (!havuzPdfKullaniciyaAit(guvenli, req.user)) {
+                return res.json({ success: false, message: 'Seçilen dosya size ait değil veya geçersiz.' });
+            }
+            const tamYol = path.join(TARAMA_HAVUZU, guvenli);
+            if (!fs.existsSync(tamYol)) {
+                return res.json({ success: false, message: 'Seçilen dosya havuzda bulunamadı (başka biri almış olabilir).' });
+            }
+            taramaDosyasi = guvenli;
+        } else if (kullaniciListesi.length === 1) {
+            taramaDosyasi = kullaniciListesi[0].dosya;
+        } else if (kullaniciListesi.length > 1) {
+            return res.json({
+                success: false,
+                requiresSelection: true,
+                adet: kullaniciListesi.length,
+                message: `Havuzda size ait ${kullaniciListesi.length} tarama var. Lütfen önizlemeden birini seçin.`
+            });
+        }
 
         if (!taramaDosyasi) {
+            const ornek = taramaOnEkleri[0] || 'kullaniciadi';
             return res.json({ 
                 success: false, 
-                message: `ORTAK HAVUZDA İSMİNİZE AÇILMIŞ PDF YOK! Lütfen önce "${kullaniciAdi}" ismiyle ortak havuza tarama yapın.` 
+                message: `ORTAK HAVUZDA İSMİNİZE AİT PDF YOK! Dosya adı şunlardan biriyle başlamalı: ${taramaOnEkleri.join(', ') || 'kullaniciadi'} (ör. ${ornek}.pdf). Havuz: ${TARAMA_HAVUZU}` 
             });
         }
 
@@ -5057,14 +5238,21 @@ function belgenetRobotDurdur() {
 }
 
 async function delayKontrollu(ms) {
+    const ek = ms >= 2000 ? 2000 : ms >= 1000 ? 1500 : 1000;
     const adim = 400;
-    let kalan = ms;
+    let kalan = ms + ek;
     while (kalan > 0) {
         belgenetRobotKontrol();
         const parca = Math.min(adim, kalan);
         await delay(parca);
         kalan -= parca;
     }
+}
+
+/** Belgenet robot adımları — temel beklemenin üstüne +1–2 sn (aşırı hız hatalarını azaltır) */
+function belgenetBekle(ms) {
+    const ek = ms >= 2000 ? 2000 : ms >= 1000 ? 1500 : 1000;
+    return delay(ms + ek);
 }
 
 function belgenetRobotSirayaAl(islem) {
@@ -5389,7 +5577,7 @@ async function belgenetPdfYukle(page, targetFrame, dosyaYolu, sayfaSayisi) {
             });
             if (btn) btn.click();
         });
-        await delay(3000);
+        await belgenetBekle(3000);
 
         const uploadPromise = page.waitForResponse(
             (resp) => {
@@ -5433,7 +5621,7 @@ async function belgenetPdfYukle(page, targetFrame, dosyaYolu, sayfaSayisi) {
 
         if (!secildi) throw new Error('Üst Yazı PDF seçilemedi');
 
-        await delay(1500);
+        await belgenetBekle(1500);
         await ustYaziYukleButonunaBas(targetFrame);
 
         const uploadResp = await uploadPromise;
@@ -5463,7 +5651,7 @@ async function belgenetPdfYukle(page, targetFrame, dosyaYolu, sayfaSayisi) {
         console.log(`❌ Deneme ${deneme}: Üst Yazı yüklenemedi`);
         if (deneme < 2) {
             await pdfBasarisizSatiriniSil(targetFrame);
-            await delay(2000);
+            await belgenetBekle(2000);
         }
     }
 
@@ -5475,17 +5663,25 @@ async function alanTemizleVeYaz(page, frame, elementId, metin) {
     const deger = String(metin);
     try {
         await frame.click(`[id="${elementId}"]`, { clickCount: 3 });
-        await delay(200);
+        await belgenetBekle(200);
     } catch (_) {
         await frame.evaluate((id) => document.getElementById(id)?.focus(), elementId);
     }
-    await page.keyboard.down('Control');
-    await page.keyboard.press('A');
-    await page.keyboard.up('Control');
-    await page.keyboard.press('Backspace');
-    await delay(150);
-    await page.keyboard.type(deger, { delay: 35 });
-    await delay(200);
+    try {
+        await page.keyboard.down('Control');
+        await page.keyboard.press('A');
+        await page.keyboard.up('Control');
+        await page.keyboard.press('Backspace');
+        await belgenetBekle(150);
+        await page.keyboard.type(deger, { delay: 35 });
+    } finally {
+        try {
+            await page.keyboard.up('Control');
+            await page.keyboard.up('Shift');
+            await page.keyboard.up('Alt');
+        } catch (_) {}
+    }
+    await belgenetBekle(200);
     await frame.evaluate((id, val) => {
         const el = document.getElementById(id);
         if (!el) return false;
@@ -5495,7 +5691,94 @@ async function alanTemizleVeYaz(page, frame, elementId, metin) {
         el.dispatchEvent(new Event('blur', { bubbles: true }));
         return true;
     }, elementId, deger);
-    await delay(300);
+    await belgenetBekle(300);
+}
+
+/** PrimeFaces LOV — global klavye/blur kullanmadan yalnızca hedef kutuya yazar */
+async function belgenetLovAlaniDoldur(frame, elementId, metin) {
+    const deger = String(metin || '').trim();
+    if (!elementId || !deger) return false;
+    const sel = `[id="${String(elementId).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+    const input = frame.locator(sel);
+    try {
+        await input.click({ timeout: 5000 });
+        await belgenetBekle(120);
+        await input.fill('');
+        await belgenetBekle(80);
+        await input.pressSequentially(deger, { delay: 45 });
+    } catch (err) {
+        console.log(`⚠️ LOV yazımı locator ile olmadı, DOM deneniyor: ${err.message}`);
+        const ok = await frame.evaluate((id, val) => {
+            const el = document.getElementById(id) ||
+                document.querySelector(`[id="${String(id).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`);
+            if (!el) return false;
+            el.focus();
+            el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        }, elementId, deger);
+        if (!ok) return false;
+    }
+    await belgenetBekle(350);
+    return true;
+}
+
+async function belgenetLovButonTikla(frame, lovTextId) {
+    await frame.evaluate((id) => {
+        const lovKok = String(id).replace(/:LovText.*$/, '');
+        const btn = document.getElementById(`${lovKok}:LovButton`) ||
+            document.querySelector(`[id="${lovKok.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}:LovButton"]`);
+        btn?.click();
+    }, lovTextId);
+}
+
+async function belgenetLovListedenSec(frame, aramaParcalari) {
+    const parcalar = Array.isArray(aramaParcalari) ? aramaParcalari : [aramaParcalari];
+    return frame.evaluate((parts) => {
+        const ps = parts.map((p) => String(p || '').toLocaleUpperCase('tr-TR')).filter(Boolean);
+        if (!ps.length) return false;
+        const gorunur = (el) => {
+            if (!el) return false;
+            if (el.classList?.contains('ui-helper-hidden')) return false;
+            const st = getComputedStyle(el);
+            const r = el.getBoundingClientRect();
+            return st.display !== 'none' && st.visibility !== 'hidden' && r.width > 8 && r.height > 8;
+        };
+        const kokler = [];
+        for (const p of document.querySelectorAll('.ui-autocomplete-panel, .ui-autocomplete-items, .ui-lov-panel, .ui-dialog, [role="dialog"]')) {
+            if (gorunur(p)) kokler.push(p);
+        }
+        if (!kokler.length) kokler.push(document.body);
+        const elms = [];
+        for (const kok of kokler) {
+            elms.push(...kok.querySelectorAll(
+                'li.ui-autocomplete-item, .ui-autocomplete-item, .lovItemTitle, .lovItemDetail, ' +
+                '.ui-selectonemenu-items li, .ui-datalist-item, tr.ui-widget-content, .ui-lov-table tr'
+            ));
+        }
+        const h = elms.find((el) => {
+            if (!gorunur(el)) return false;
+            const txt = (el.innerText || el.textContent || '').toLocaleUpperCase('tr-TR');
+            return ps.some((p) => txt.includes(p));
+        });
+        if (!h) return false;
+        const tikla = h.closest('li.ui-autocomplete-item, tr, li') || h;
+        tikla.scrollIntoView({ block: 'center' });
+        tikla.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+        tikla.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+        tikla.click();
+        if (tikla.closest('.ui-dialog')) {
+            tikla.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
+            const dlg = tikla.closest('.ui-dialog');
+            const secBtn = dlg && Array.from(dlg.querySelectorAll('.ui-button, button, a, span.ui-button')).find((b) => {
+                const t = (b.innerText || b.textContent || b.value || '').trim().toLocaleUpperCase('tr-TR');
+                return t === 'SEÇ' || t === 'SEC' || t === 'TAMAM' || t === 'OK' || t.includes('SEÇ');
+            });
+            secBtn?.click();
+        }
+        return true;
+    }, parcalar);
 }
 
 /** Ad * zorunlu alanını bul (2. satır = Vergi/Kısa Ad altındaki tek input) */
@@ -5558,13 +5841,13 @@ async function tuzelKisiAdAlaniDoldur(page, frame, sirketAdi) {
         const adId = await tuzelKisiAdInputIdBul(frame);
         if (!adId) {
             console.log(`⚠️ Ad * alanı bulunamadı (${deneme}. deneme)`);
-            await delay(500);
+            await belgenetBekle(500);
             continue;
         }
 
         console.log(`✍️ Ad * dolduruluyor (${deneme}. deneme): ${adId}`);
         await alanTemizleVeYaz(page, frame, adId, ad);
-        await delay(600);
+        await belgenetBekle(600);
 
         const dolu = await frame.evaluate((id, beklenen) => {
             const el = document.getElementById(id);
@@ -5598,6 +5881,158 @@ async function belgenetKonuInputIdBul(frame) {
     });
 }
 
+async function belgenetHavaleInputIdBul(frame) {
+    for (let deneme = 1; deneme <= 8; deneme++) {
+        const id = await frame.evaluate(() => {
+            const idIleBul = (rawId) => {
+                if (!rawId) return null;
+                return document.getElementById(rawId) ||
+                    document.querySelector(`[id="${String(rawId).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`);
+            };
+            const kullanilabilirInput = (el) => {
+                if (!el || el.type === 'hidden' || el.disabled) return false;
+                const r = el.getBoundingClientRect();
+                return r.width > 0 && r.height > 0;
+            };
+            const etiketEsles = (text) => {
+                const t = String(text || '').toLocaleUpperCase('tr-TR').replace(/\s+/g, ' ').trim();
+                return t === 'KIŞIYE HAVALE' || t === 'KISIYE HAVALE' ||
+                    t.includes('KIŞIYE HAVALE') || t.includes('KISIYE HAVALE') ||
+                    t.includes('HAVALE EDILECEK') || t.includes('HAVALE EDILEN') ||
+                    (t.includes('HAVALE') && t.includes('KISI'));
+            };
+
+            const sabitIdler = [
+                'evrakBilgileriForm:dagitimBilgileriKullaniciLov:LovText',
+                'evrakBilgileriForm:dagitimBilgileriKullaniciLov:LovText_input'
+            ];
+            for (const sabit of sabitIdler) {
+                const el = idIleBul(sabit);
+                if (kullanilabilirInput(el)) return sabit;
+            }
+            for (const el of Array.from(document.querySelectorAll(
+                'input[id*="dagitimBilgileriKullaniciLov"], input[id*="KullaniciLov"][id*="LovText"]'
+            ))) {
+                if (kullanilabilirInput(el) && el.id) return el.id;
+            }
+
+            for (const etiket of Array.from(document.querySelectorAll('label'))) {
+                const forId = etiket.getAttribute('for');
+                if (forId && (forId.includes('KullaniciLov') || forId.includes('dagitimBilgileri'))) {
+                    const el = idIleBul(forId);
+                    if (kullanilabilirInput(el)) return forId;
+                }
+                const metin = (etiket.innerText || etiket.textContent || '').trim();
+                if (!metin || !etiketEsles(metin)) continue;
+                if (forId) {
+                    const el = idIleBul(forId);
+                    if (kullanilabilirInput(el)) return forId;
+                }
+            }
+
+            for (const etiket of Array.from(document.querySelectorAll('td, span, div'))) {
+                const metin = (etiket.innerText || etiket.textContent || '').trim();
+                if (!metin || !etiketEsles(metin)) continue;
+                const satir = etiket.closest('tr') || etiket.closest('.ui-g') || etiket.parentElement;
+                if (!satir) continue;
+                const input = satir.querySelector(
+                    'input[type="text"], input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea'
+                );
+                if (kullanilabilirInput(input) && input.id) return input.id;
+            }
+
+            for (const sel of ['input[id*="Havale"]', 'input[id*="havale"]', 'input[id*="devir"]', 'input[id*="Devreden"]']) {
+                const el = document.querySelector(sel);
+                if (kullanilabilirInput(el) && el.id) return el.id;
+            }
+            return null;
+        });
+        if (id) return id;
+        if (deneme < 8) await belgenetBekle(1000);
+    }
+    return null;
+}
+
+/** Tanımlamalardan Kişiye Havale arama metni (adın ilk 3 harfi) + listede eşleşecek parçalar */
+function belgenetHavaleAyarAl() {
+    const varsayilanAd = String(process.env.BELGENET_HAVALE_KISI || 'BAHRİ KARLI').trim();
+    const ad = String(sistemAyarAl()?.belgenetHavaleKisiAdi || varsayilanAd).trim() || varsayilanAd;
+    const upper = ad.toLocaleUpperCase('tr-TR');
+    const kelimeler = upper.split(/\s+/).filter(Boolean);
+    const ilk = kelimeler[0] || 'BAH';
+    let arama = ilk.substring(0, 3).toLocaleUpperCase('tr-TR');
+    if (arama.length < 3) arama = 'BAH';
+    const secim = [...new Set([
+        ...(kelimeler.length >= 2 ? [kelimeler[kelimeler.length - 1], kelimeler[0]] : kelimeler),
+        'KARLI', 'BAHRİ', 'BAHRI'
+    ].filter(Boolean))];
+    return { ad, arama, secim };
+}
+
+/** Kişiye Havale — orijinal sade akış (doğru alan ID + gerçek tıklama) */
+async function belgenetKisiyeHavaleDoldur(page, frame) {
+    const { ad, arama, secim } = belgenetHavaleAyarAl();
+    console.log(`👤 'Kişiye Havale' kutusu aranıyor (${ad}, arama: ${arama})...`);
+    const havaleId = await belgenetHavaleInputIdBul(frame);
+    if (!havaleId) {
+        console.log('❌ Kişiye Havale alanı bulunamadı — robot bu adımı atladı!');
+        return;
+    }
+    const sel = `[id="${String(havaleId).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+    console.log(`🎯 Kişiye Havale alanı: ${havaleId}`);
+    try {
+        await frame.focus(sel);
+    } catch (_) {
+        await frame.click(sel).catch(() => {});
+    }
+    await belgenetBekle(2000);
+
+    console.log(`🎯 Kişiye Havale için '${arama}' yazılıyor...`);
+    await page.keyboard.type(arama, { delay: 380 });
+
+    console.log('⏳ Personel listesinin açılması için RADAR devrede...');
+    let personelTiklandiMi = false;
+    for (let deneme = 1; deneme <= 12; deneme++) {
+        await belgenetBekle(2000);
+        const hedefMetin = await frame.evaluate((parcalari) => {
+            const elemanlar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item, li.ui-autocomplete-item'));
+            const hedef = elemanlar.find((el) => {
+                const t = (el.innerText || el.textContent || '').toUpperCase();
+                return parcalari.some((p) => t.includes(p)) && el.offsetParent !== null;
+            });
+            if (!hedef) return null;
+            hedef.setAttribute('data-cks-havale-hedef', '1');
+            return (hedef.innerText || hedef.textContent || '').trim();
+        }, secim);
+        if (hedefMetin) {
+            const handle = await frame.$('[data-cks-havale-hedef="1"]');
+            if (handle) {
+                try {
+                    await handle.click({ delay: 100 });
+                } finally {
+                    await handle.dispose().catch(() => {});
+                }
+            }
+            await frame.evaluate(() => {
+                document.querySelector('[data-cks-havale-hedef="1"]')?.removeAttribute('data-cks-havale-hedef');
+            }).catch(() => {});
+            console.log(`✅ [${deneme}. denemede] '${hedefMetin}' seçildi`);
+            personelTiklandiMi = true;
+            break;
+        }
+    }
+    if (!personelTiklandiMi) {
+        console.log('⚠️ Menü tıklanamadı, klavye Enter deneniyor...');
+        try {
+            await frame.focus(sel);
+            await belgenetBekle(500);
+            await page.keyboard.press('ArrowDown');
+            await belgenetBekle(1200);
+            await page.keyboard.press('Enter');
+        } catch (_) {}
+    }
+}
+
 /** Konu alanına yaz ve doğrula */
 async function belgenetKonuYaz(page, frame, metin) {
     if (!metin) return false;
@@ -5607,7 +6042,7 @@ async function belgenetKonuYaz(page, frame, metin) {
         return false;
     }
     await alanTemizleVeYaz(page, frame, konuId, metin);
-    await delay(300);
+    await belgenetBekle(300);
     const dolu = await frame.evaluate((id, beklenen) => {
         const el = document.getElementById(id);
         return (el?.value || '').trim().length > 0 && (el.value || '').includes(beklenen.slice(0, 8));
@@ -5730,7 +6165,7 @@ async function belgenetSahisFormuDuzelt(page, frame, { konuMetni, tc }) {
     if (durum.sorunlar.includes('kisiKurum-tuzel')) {
         for (let i = 0; i < 3; i++) {
             await belgenetKisiKurumGercekSec(frame);
-            await delay(600);
+            await belgenetBekle(600);
             if (await belgenetKisiKurumGercekMi(frame)) break;
         }
     }
@@ -5738,7 +6173,7 @@ async function belgenetSahisFormuDuzelt(page, frame, { konuMetni, tc }) {
         const aramaId = await frame.evaluate(() => document.querySelector('input[id*="GercekKisi"]')?.id || null);
         if (aramaId) {
             await alanTemizleVeYaz(page, frame, aramaId, tc);
-            await delay(800);
+            await belgenetBekle(800);
             await frame.evaluate((no) => {
                 const elms = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
                 const h = elms.find((e) => e.innerText.includes(no) && e.offsetParent !== null);
@@ -5747,7 +6182,7 @@ async function belgenetSahisFormuDuzelt(page, frame, { konuMetni, tc }) {
         }
     }
 
-    await delay(400);
+    await belgenetBekle(400);
     const son = await belgenetSahisFormDurumu(frame, { konuMetni, tc });
     if (!son.ok) console.log(`⚠️ [ŞAHIS] Form hâlâ eksik: ${son.sorunlar.join(', ')}`);
     return son.ok;
@@ -5791,7 +6226,7 @@ async function belgenetSirketFormuDuzelt(page, frame, { konuMetni, vkn }) {
     if (durum.sorunlar.includes('kisiKurum-gercek')) {
         for (let i = 0; i < 3; i++) {
             await belgenetKisiKurumTuzelSec(frame);
-            await delay(600);
+            await belgenetBekle(600);
             if (await belgenetKisiKurumTuzelMi(frame)) break;
         }
     }
@@ -5799,7 +6234,7 @@ async function belgenetSirketFormuDuzelt(page, frame, { konuMetni, vkn }) {
         const aramaId = await frame.evaluate(() => document.querySelector('input[id*="TuzelKisi"]')?.id || null);
         if (aramaId) {
             await alanTemizleVeYaz(page, frame, aramaId, vkn);
-            await delay(800);
+            await belgenetBekle(800);
             await frame.evaluate((no) => {
                 const elms = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
                 const h = elms.find((e) => e.innerText.includes(no) && e.offsetParent !== null);
@@ -5808,7 +6243,7 @@ async function belgenetSirketFormuDuzelt(page, frame, { konuMetni, vkn }) {
         }
     }
 
-    await delay(400);
+    await belgenetBekle(400);
     const son = await belgenetSirketFormDurumu(frame, { konuMetni, vkn });
     if (!son.ok) console.log(`⚠️ Form hâlâ eksik: ${son.sorunlar.join(', ')}`);
     return son.ok;
@@ -5841,7 +6276,7 @@ async function belgenetDialogFrameBul(page, targetFrame, baslikParca = 'Tüzel K
                 }
             } catch (_) { /* frame erişilemez */ }
         }
-        await delay(500);
+        await belgenetBekle(500);
     }
     console.log('⚠️ Dialog frame bulunamadı, varsayılan frame kullanılıyor');
     return targetFrame;
@@ -5919,7 +6354,7 @@ async function belgenetTuzelKisiHizliKayit(page, targetFrame, vergiNo, sirketAdi
     console.log(`🏢 Tüzel Kişi formu dolduruluyor: VKN=${vergiNo}, Ad=${ad}`);
 
     const dialogFrame = await belgenetDialogFrameBul(page, targetFrame, 'Tüzel Kişi Kaydet');
-    await delay(500);
+    await belgenetBekle(500);
 
     let alanlar = await dialogFrame.evaluate(tuzelKisiAlanlariBulScript);
     if (!alanlar.dialogVar || !alanlar.vergiId) {
@@ -5942,14 +6377,14 @@ async function belgenetTuzelKisiHizliKayit(page, targetFrame, vergiNo, sirketAdi
 
     // 1) Sadece Vergi No
     await alanTemizleVeYaz(page, aktifFrame, alanlar.vergiId, temizVkn);
-    await delay(400);
+    await belgenetBekle(400);
 
     // 2) Kısa Ad ZORUNLU DEĞİL — dokunma. Tam şirket adını Ad * alanına yaz
     const adDoldu = await tuzelKisiAdAlaniDoldur(page, aktifFrame, ad);
     if (!adDoldu) {
         throw new Error('Ad * (şirket adı) alanı doldurulamadı');
     }
-    await delay(150);
+    await belgenetBekle(150);
 
     // 3) Tüzel Kişi Tipi → DİĞER (zaten seçiliyse atla)
     if (await tuzelKisiTipiDigerMi(aktifFrame)) {
@@ -5961,7 +6396,7 @@ async function belgenetTuzelKisiHizliKayit(page, targetFrame, vergiNo, sirketAdi
             tipSecildi = await tuzelKisiTipiDigerSec(page, aktifFrame);
             if (tipSecildi) break;
             console.log(`⚠️ DİĞER seçimi ${d}. deneme başarısız, tekrar...`);
-            await delay(400);
+            await belgenetBekle(400);
         }
         if (!tipSecildi && !/DİĞER|DIGER/i.test(await tuzelKisiTipiMetniOku(aktifFrame))) {
             throw new Error(`Tüzel Kişi Tipi "DİĞER" seçilemedi`);
@@ -6016,7 +6451,7 @@ async function belgenetTuzelKisiHizliKayit(page, targetFrame, vergiNo, sirketAdi
     await belgenetEvetOnayiniBekle(page, targetFrame, 8, 350);
 
     for (let i = 0; i < 12; i++) {
-        await delay(200);
+        await belgenetBekle(200);
         const kapali = await aktifFrame.evaluate(() =>
             !Array.from(document.querySelectorAll('.ui-dialog')).some((d) =>
                 d.offsetParent !== null && (d.innerText || '').includes('Tüzel Kişi Kaydet')
@@ -6024,7 +6459,7 @@ async function belgenetTuzelKisiHizliKayit(page, targetFrame, vergiNo, sirketAdi
         );
         if (kapali) break;
     }
-    await delay(300);
+    await belgenetBekle(300);
     console.log('✅ Tüzel Kişi kaydı tamamlandı, ana forma dönülüyor');
 }
 
@@ -6111,13 +6546,13 @@ async function tuzelKisiTipiDigerSec(page, dialogFrame) {
         await dialogFrame.evaluate(() => {
             document.querySelector('.ui-selectonemenu[id*="tuzelKisiTipi"]')?.scrollIntoView({ block: 'center' });
         });
-        await delay(300);
+        await belgenetBekle(300);
 
         // Menü kapalıysa aç
         const panelAcik = await tuzelKisiTipiPanelAcikMi(dialogFrame) || await tuzelKisiTipiPanelAcikMi(page.mainFrame());
         if (!panelAcik) {
             await fareIleTikla(page, dialogFrame, '.ui-selectonemenu[id*="tuzelKisiTipi"] .ui-selectonemenu-trigger');
-            await delay(500);
+            await belgenetBekle(500);
         } else {
             console.log('   panel zaten açık');
         }
@@ -6145,10 +6580,10 @@ async function tuzelKisiTipiDigerSec(page, dialogFrame) {
                     }
                 }, li.idx);
 
-                await delay(150);
+                await belgenetBekle(150);
                 await page.mouse.click(li.x, li.y);
                 console.log(`   fare tık: (${Math.round(li.x)}, ${Math.round(li.y)})`);
-                await delay(250);
+                await belgenetBekle(250);
 
                 if (await tuzelKisiTipiDigerMi(dialogFrame)) {
                     console.log('✅ Tüzel Kişi Tipi: DİĞER seçildi');
@@ -6163,10 +6598,10 @@ async function tuzelKisiTipiDigerSec(page, dialogFrame) {
         console.log('   klavye: 3x ArrowDown + Enter');
         for (let i = 0; i < 3; i++) {
             await page.keyboard.press('ArrowDown');
-            await delay(80);
+            await belgenetBekle(80);
         }
         await page.keyboard.press('Enter');
-        await delay(300);
+        await belgenetBekle(300);
 
         if (await tuzelKisiTipiDigerMi(dialogFrame)) {
             console.log('✅ Tüzel Kişi Tipi: klavye ile DİĞER');
@@ -6174,7 +6609,7 @@ async function tuzelKisiTipiDigerSec(page, dialogFrame) {
         }
 
         await page.keyboard.press('Escape');
-        await delay(300);
+        await belgenetBekle(300);
     }
 
     console.log('❌ Tüzel Kişi Tipi: DİĞER seçilemedi');
@@ -6258,7 +6693,7 @@ async function belgenetEvetOnayiniBekle(page, targetFrame, maxDeneme = 15, pollM
                 });
                 if (sonuc) {
                     console.log(`✅ Belgenet onay penceresi: "${sonuc}" (${d}. deneme)`);
-                    await delay(pollMs < 500 ? 400 : 1500);
+                    await belgenetBekle(pollMs < 500 ? 400 : 1500);
                     return true;
                 }
             } catch (_) { /* frame erişilemez olabilir */ }
@@ -6337,7 +6772,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
 
         await page.bringToFront();
         console.log("✅ TZOB Belgenet bulundu ve kontrol ele alındı!");
-        await delay(1200); 
+        await belgenetBekle(1200); 
 
         const targetFrame = page.frames().find(f => 
             f.url().includes('xhtml') || f.url().includes('main')
@@ -6386,22 +6821,22 @@ app.post('/api/belgenet-yukle', async (req, res) => {
 
             if (tarihKutusuId) {
                 await targetFrame.focus(`[id="${tarihKutusuId}"]`);
-                await delay(800);
+                await belgenetBekle(800);
                 
                 // İçini temizle
                 await page.keyboard.down('Control');
                 await page.keyboard.press('A');
                 await page.keyboard.up('Control');
                 await page.keyboard.press('Backspace');
-                await delay(500);
+                await belgenetBekle(500);
 
                 console.log(`📅 [Deneme ${deneme}] Güncel tarih yazılıyor: ${bugun}`);
-                await page.keyboard.type(bugun, { delay: 100 }); 
-                await delay(500);
+                await page.keyboard.type(bugun, { delay: 150 }); 
+                await belgenetBekle(500);
                 
                 // Sisteme tarihi algılat
                 await page.keyboard.press('Tab');
-                await delay(800); // 🎯 VİTES: Yazdıktan sonra nefes al
+                await belgenetBekle(800); // 🎯 VİTES: Yazdıktan sonra nefes al
 
                 // 🎯 DOĞRULAMA: Kutuya gerçekten tarih yazılmış mı?
                 const kutuIcerigi = await targetFrame.evaluate((id) => {
@@ -6418,14 +6853,14 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                 }
             } else {
                 console.log(`⏳ Tarih kutusu henüz ekrana düşmedi, 2 saniye bekleniyor... (${deneme}/3)`);
-                await delay(2000); // Sayfa yavaşsa bekle ve tekrar ara
+                await belgenetBekle(2000); // Sayfa yavaşsa bekle ve tekrar ara
             }
         }
 
         if (!tarihYazildiMi) {
             console.log("❌ KRİTİK UYARI: 3 denemeye rağmen Evrak Tarihi algılanamadı, manuel müdahale gerekebilir!");
         }
-        await delay(1000);
+        await belgenetBekle(1000);
 
         // =========================================================
         // 🎯 KONU KODU (245) - GÜVENLİ VE YEDEK PLANLI
@@ -6440,11 +6875,11 @@ app.post('/api/belgenet-yukle', async (req, res) => {
 
         if (konuKoduKutuId) {
             await targetFrame.focus(`[id="${konuKoduKutuId}"]`);
-            await delay(500);
-            await page.keyboard.type('245', { delay: 200 }); 
+            await belgenetBekle(500);
+            await page.keyboard.type('245', { delay: 280 }); 
             
             console.log("⏳ Konu Kodu listesi bekleniyor (3 sn)...");
-            await delay(3000); 
+            await belgenetBekle(3000); 
             
             const konuTiklandiMi = await targetFrame.evaluate(() => {
                 const basliklar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
@@ -6459,17 +6894,17 @@ app.post('/api/belgenet-yukle', async (req, res) => {
             if (!konuTiklandiMi) {
                 console.log("⚠️ Konu menüsü tıklanamadı, B Planı (Klavye) devreye giriyor...");
                 await page.keyboard.press('ArrowDown');
-                await delay(700);
+                await belgenetBekle(700);
                 await page.keyboard.press('Enter');
             }
         }
-        await delay(1500);
+        await belgenetBekle(1500);
 
         // ✍️ KONU METNİ
-        await delay(800);
+        await belgenetBekle(800);
         await belgenetKonuYaz(page, targetFrame, temizDosyaAdi);
 
-        await delay(800); 
+        await belgenetBekle(800); 
 
         await targetFrame.evaluate(() => {
             const select = document.querySelector('select[id*="evrakTuruCombo"]');
@@ -6478,13 +6913,13 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                 select.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
-        await delay(1200);
+        await belgenetBekle(1200);
 
         // ==========================================
         // 📬 Geliş Tipi: ELDEN Seçiliyor
         // ==========================================
         console.log("⏳ Geliş Tipi seçimi için 2 saniye bekleniyor...");
-        await delay(2000); 
+        await belgenetBekle(2000); 
 
         await targetFrame.evaluate(() => {
             const select = document.querySelector('select[id*="evrakGelisTipi"]');
@@ -6498,81 +6933,23 @@ app.post('/api/belgenet-yukle', async (req, res) => {
         });
 
         console.log("✅ Geliş Tipi: ELDEN seçildi. Sunucu onayı için bekleniyor...");
-        await delay(2500); 
+        await belgenetBekle(2500);
 
-        // =========================================================
-        // 🎯 KİŞİYE HAVALE 
-        // =========================================================
-        console.log("👤 'Kişiye Havale' kutusu aranıyor...");
-        const havaleKutusuId = await targetFrame.evaluate(() => {
-            const etiketler = Array.from(document.querySelectorAll('label, td, span'));
-            const etiket = etiketler.find(l => l.innerText && l.innerText.trim().includes('Kişiye Havale'));
-            if(etiket) {
-                const satir = etiket.closest('tr');
-                if(satir) {
-                    const input = satir.querySelector('input[type="text"]');
-                    if(input) {
-                        input.value = ''; 
-                        return input.id;
-                    }
+        await belgenetKisiyeHavaleDoldur(page, targetFrame);
+        await belgenetBekle(2500);
+
+        console.log("👤 'Kişi-Kurum' menüsünden 'Gerçek Kişi' seçiliyor...");
+        await targetFrame.evaluate(() => {
+            const select = document.querySelector('select[id$=":kisiKurum"], select[id*="kisiKurum"]');
+            if (select) {
+                const option = Array.from(select.options).find((opt) => opt.text.includes('Gerçek Kişi'));
+                if (option) {
+                    select.value = option.value;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             }
-            return null; 
         });
-
-        if (havaleKutusuId) {
-            await targetFrame.focus(`[id="${havaleKutusuId}"]`);
-            await delay(2000); 
-            
-            console.log(`🎯 Kişiye Havale için 'BAH' yazılıyor...`);
-            await page.keyboard.type('BAH', { delay: 1000 }); 
-            
-            console.log("⏳ Personel listesinin açılması için RADAR devrede...");
-            
-            let personelTiklandiMi = false;
-
-            for (let deneme = 1; deneme <= 12; deneme++) {
-                await delay(2000); 
-                
-                personelTiklandiMi = await targetFrame.evaluate(() => {
-                    const elemanlar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
-                    const hedef = elemanlar.find(el => 
-                        (el.innerText.toUpperCase().includes('KARLI') || el.innerText.toUpperCase().includes('BAHRİ')) && 
-                        el.offsetParent !== null
-                    );
-                    if (hedef) {
-                        hedef.click();
-                        return true;
-                    }
-                    return false;
-                });
-
-                if (personelTiklandiMi) {
-                    console.log(`✅ [${deneme}. Saniyede] 'Bahri KARLI' menüden yakalandı ve seçildi!`);
-                    break; 
-                }
-            }
-
-            if (!personelTiklandiMi) {
-                console.log("⚠️ 12 Saniye geçmesine rağmen menü açılmadı! B Planı (Klavye Enter) deneniyor...");
-                await page.keyboard.press('ArrowDown');
-                await delay(1200);
-                await page.keyboard.press('Enter');
-            }
-        }
-        
-        await delay(2500); 
-
-        // 👤 KİŞİ-KURUM → GERÇEK KİŞİ
-        for (let k = 0; k < 4; k++) {
-            await belgenetKisiKurumGercekSec(targetFrame);
-            await delay(600);
-            if (await belgenetKisiKurumGercekMi(targetFrame)) {
-                console.log('✅ Kişi-Kurum: Gerçek Kişi');
-                break;
-            }
-        }
-        await delay(500);
+        await belgenetBekle(2000);
 
 // ==========================================
         // 🎯 EN SON AŞAMA: GELDİĞİ KİŞİ VE HIZLI KAYIT (ÇİFT MOTOR)
@@ -6620,13 +6997,13 @@ app.post('/api/belgenet-yukle', async (req, res) => {
         if (aramaKutusuId) {
             console.log(`✍️ Arama kutusuna yazılıyor: ${kimlikNo}`);
             await targetFrame.focus(`[id="${aramaKutusuId}"]`);
-            await delay(300);
-            await page.keyboard.type(kimlikNo, { delay: 60 }); 
+            await belgenetBekle(300);
+            await page.keyboard.type(kimlikNo, { delay: 100 }); 
             
             console.log("⏳ Belgenet veritabanında aranıyor...");
             let secildiMi = false;
             for (let aramaDeneme = 1; aramaDeneme <= 12; aramaDeneme++) {
-                await delay(1500);
+                await belgenetBekle(1500);
                 secildiMi = await targetFrame.evaluate((arananNo) => {
                     const elms = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
                     const h = elms.find(e => e.innerText.includes(arananNo) && e.offsetParent !== null);
@@ -6655,7 +7032,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                     if (btn) btn.click();
                 });
 
-                await delay(3000); 
+                await belgenetBekle(3000); 
 
                 if (isTuzel) {
                     await belgenetTuzelKisiHizliKayit(page, targetFrame, kimlikNo, req.body.adsoyad);
@@ -6668,30 +7045,30 @@ app.post('/api/belgenet-yukle', async (req, res) => {
 
                     console.log("✍️ TC yazılıyor...");
                     await targetFrame.focus('input[id*="tcKimlikNoInput"]');
-                    await delay(300);
+                    await belgenetBekle(300);
                     await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control');
                     await page.keyboard.press('Backspace');
-                    await page.keyboard.type(kimlikNo, { delay: 60 });
-                    await delay(800);
+                    await page.keyboard.type(kimlikNo, { delay: 100 });
+                    await belgenetBekle(800);
 
                     if (dogumTarihiVerisi && dogumTarihiVerisi !== "") {
                         console.log(`✍️ Doğum Tarihi tuşlanıyor: ${dogumTarihiVerisi}`);
                         await targetFrame.click('input[id*="ghkDogumTarihi_input"]');
-                        await delay(300);
+                        await belgenetBekle(300);
                         await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control');
                         await page.keyboard.press('Backspace');
-                        await delay(300);
+                        await belgenetBekle(300);
 
                         for (let i = 0; i < 10; i++) {
                             await page.keyboard.press('ArrowLeft');
                         }
-                        await delay(200);
+                        await belgenetBekle(200);
 
-                        await page.keyboard.type(dogumTarihiVerisi, { delay: 180 });
-                        await delay(500);
+                        await page.keyboard.type(dogumTarihiVerisi, { delay: 250 });
+                        await belgenetBekle(500);
                         await page.keyboard.press('Tab');
                     }
-                    await delay(1000);
+                    await belgenetBekle(1000);
 
                     await targetFrame.evaluate(() => {
                         const btn = Array.from(document.querySelectorAll('button')).find(b => 
@@ -6704,7 +7081,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                     console.log("⏳ KPS Sorgusu bekleniyor...");
                     let kpsTamam = false;
                     for (let kpsDeneme = 1; kpsDeneme <= 20; kpsDeneme++) {
-                        await delay(1500);
+                        await belgenetBekle(1500);
                         kpsTamam = await targetFrame.evaluate(() => {
                             const kaydetBtn = document.querySelector('button[id*="saveGercekKisiHizliKayitButton"]');
                             const adInput = document.querySelector('input[id*="adInput"], input[id*="AdInput"]');
@@ -6732,7 +7109,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                     await belgenetEvetOnayiniBekle(page, targetFrame);
                 }
                 
-                await delay(4000);
+                await belgenetBekle(4000);
                 await belgenetEvetOnayiniBekle(page, targetFrame, 8);
             }
         }
@@ -6745,7 +7122,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                 : await belgenetSahisFormuDuzelt(page, targetFrame, { konuMetni: temizDosyaAdi, tc: formKimlik });
             if (hazir) break;
             console.log(`⚠️ Form düzeltme ${f}. tur (${isTuzel ? 'tüzel' : 'şahıs'})`);
-            await delay(800);
+            await belgenetBekle(800);
         }
 
         // ==========================================
@@ -6832,7 +7209,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
             // 🔄 SAYFAYI SIFIRLAMA İŞLEMİ
             // ==========================================
             console.log("🚪 Popup'taki 'Yeni Kayıt' veya 'Kapat' butonuna basılıyor...");
-            await delay(1000); 
+            await belgenetBekle(1000); 
             await targetFrame.evaluate(() => {
                 const butonlar = [...document.querySelectorAll('.ui-button, button, input[type="submit"], input[type="button"], a, span')];
                 let islemBtn = butonlar.find(el => el.offsetParent !== null && (el.innerText || '').trim().toUpperCase() === 'YENİ KAYIT');
@@ -6843,7 +7220,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
             });
 
             console.log("🔄 Ana menüden 'Gelen Evrak Kayıt' açılıyor (Sıfırlama işlemi)...");
-            await delay(2000); 
+            await belgenetBekle(2000); 
             await page.evaluate(() => {
                 const linkler = Array.from(document.querySelectorAll('a'));
                 const gelenEvrakLink = linkler.find(el => 
@@ -6853,7 +7230,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
                 if (gelenEvrakLink) gelenEvrakLink.click();
             });
             
-            await delay(3000); 
+            await belgenetBekle(3000); 
             console.log("✅ Sistem sıradaki evrak için tertemiz açıldı!");
 
             if (!res.headersSent) {
@@ -7380,7 +7757,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
         if (!page) return res.json({ success: false, message: "Belgenet (TZOB) sayfası açık değil!" }); 
 
         await page.bringToFront();
-        await delay(1200); 
+        await belgenetBekle(1200); 
 
         const targetFrame = page.frames().find(f => f.url().includes('xhtml') || f.url().includes('main')) || page.mainFrame();
 
@@ -7407,14 +7784,14 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
                 return (input && input.offsetParent !== null) ? input.id : null;
             });
             if (tarihId) {
-                await targetFrame.focus(`[id="${tarihId}"]`); await delay(800);
-                await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await delay(500);
-                await page.keyboard.type(bugun, { delay: 100 }); await delay(500); await page.keyboard.press('Tab'); await delay(800); 
+                await targetFrame.focus(`[id="${tarihId}"]`); await belgenetBekle(800);
+                await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await belgenetBekle(500);
+                await page.keyboard.type(bugun, { delay: 150 }); await belgenetBekle(500); await page.keyboard.press('Tab'); await belgenetBekle(800); 
                 const icerik = await targetFrame.evaluate((id) => document.getElementById(id)?.value || "", tarihId);
                 if (icerik.length >= 8) break; 
-            } else await delay(2000); 
+            } else await belgenetBekle(2000); 
         }
-        await delay(1000);
+        await belgenetBekle(1000);
 
         // 📋 KONU KODU (245)
         const konuKoduKutuId = await targetFrame.evaluate(() => {
@@ -7423,70 +7800,55 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
             if(input) { input.value = ''; return input.id; } return null;
         });
         if (konuKoduKutuId) {
-            await targetFrame.focus(`[id="${konuKoduKutuId}"]`); await delay(500);
-            await page.keyboard.type('245', { delay: 200 }); await delay(3000); 
+            await targetFrame.focus(`[id="${konuKoduKutuId}"]`); await belgenetBekle(500);
+            await page.keyboard.type('245', { delay: 280 }); await belgenetBekle(3000); 
             const sec = await targetFrame.evaluate(() => {
                 const basliklar = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
                 const h = basliklar.find(el => (el.innerText.includes('Çiftçi Kayıt Sistemi') || el.innerText.includes('245')) && el.offsetParent !== null);
                 if (h) { h.click(); return true; } return false; 
             });
-            if (!sec) { await page.keyboard.press('ArrowDown'); await delay(700); await page.keyboard.press('Enter'); }
+            if (!sec) { await page.keyboard.press('ArrowDown'); await belgenetBekle(700); await page.keyboard.press('Enter'); }
         }
-        await delay(1500);
+        await belgenetBekle(1500);
 
         // ✍️ KONU METNİ
-        await delay(800);
+        await belgenetBekle(800);
         await belgenetKonuYaz(page, targetFrame, temizDosyaAdi);
 
-        await delay(800); 
+        await belgenetBekle(800); 
         await targetFrame.evaluate(() => {
             const select = document.querySelector('select[id*="evrakTuruCombo"]');
             if (select) { select.value = "A"; select.dispatchEvent(new Event('change', { bubbles: true })); }
         });
-        await delay(1200);
+        await belgenetBekle(1200);
 
         // 📬 GELİŞ TİPİ: ELDEN
-        await delay(2000); 
+        await belgenetBekle(2000); 
         await targetFrame.evaluate(() => {
             const select = document.querySelector('select[id*="evrakGelisTipi"]');
             if (select) { const opt = [...select.options].find(o => o.text.toUpperCase().includes('ELDEN')); if (opt) { select.value = opt.value; select.dispatchEvent(new Event('change', { bubbles: true })); } }
         });
-        await delay(2500); 
+        await belgenetBekle(2500);
 
-        // 🎯 KİŞİYE HAVALE 
-        const havaleId = await targetFrame.evaluate(() => {
-            const etiketler = Array.from(document.querySelectorAll('label, td, span'));
-            const etiket = etiketler.find(l => l.innerText && l.innerText.trim().includes('Kişiye Havale'));
-            if(etiket) { const satir = etiket.closest('tr'); if(satir) { const input = satir.querySelector('input[type="text"]'); if(input) return input.id; } } return null; 
-        });
-        if (havaleId) {
-            await targetFrame.focus(`[id="${havaleId}"]`); await delay(500);
-            await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control'); await page.keyboard.press('Backspace'); await delay(500);
-            await page.keyboard.type('BAH', { delay: 250 }); 
-            let pSecildi = false;
-            for (let deneme = 1; deneme <= 10; deneme++) {
-                await delay(1000); 
-                pSecildi = await targetFrame.evaluate(() => {
-                    const elms = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
-                    const h = elms.find(el => (el.innerText.toUpperCase().includes('KARLI') || el.innerText.toUpperCase().includes('BAHRİ') || el.innerText.toUpperCase().includes('BAHRI')) && el.offsetParent !== null);
-                    if (h) { h.scrollIntoView({ block: 'center' }); h.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window })); h.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window })); h.click(); return true; } return false;
-                });
-                if (pSecildi) break; 
-            }
-            if (!pSecildi) { await page.keyboard.press('ArrowDown'); await delay(800); await page.keyboard.press('Enter'); }
-        }
-        await delay(2500);
+        await belgenetKisiyeHavaleDoldur(page, targetFrame);
+        await belgenetBekle(2500);
 
-        // 🏢 KİŞİ-KURUM → TÜZEL KİŞİ
-        for (let k = 0; k < 4; k++) {
-            await belgenetKisiKurumTuzelSec(targetFrame);
-            await delay(600);
-            if (await belgenetKisiKurumTuzelMi(targetFrame)) {
-                console.log('✅ Kişi-Kurum: Tüzel Kişi');
-                break;
-            }
+        console.log("👤 'Kişi-Kurum' menüsünden 'Tüzel Kişi' seçiliyor...");
+        for (let k = 0; k < 3; k++) {
+            await targetFrame.evaluate(() => {
+                const select = document.querySelector('select[id$=":kisiKurum"], select[id*="kisiKurum"]');
+                if (select) {
+                    const option = Array.from(select.options).find((opt) => opt.text.includes('Tüzel Kişi'));
+                    if (option) {
+                        select.value = option.value;
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            });
+            await belgenetBekle(1500);
+            if (await belgenetKisiKurumTuzelMi(targetFrame)) break;
         }
-        await delay(500); 
+        await belgenetBekle(500);
 
         // ==========================================
         // 🏢 GELDİĞİ KİŞİ VE HIZLI KAYIT (SADECE ŞİRKET)
@@ -7503,12 +7865,12 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
         });
 
         if (aramaKutusuId) {
-            await targetFrame.focus(`[id="${aramaKutusuId}"]`); await delay(300);
-            await page.keyboard.type(temizVergi, { delay: 60 }); 
+            await targetFrame.focus(`[id="${aramaKutusuId}"]`); await belgenetBekle(300);
+            await page.keyboard.type(temizVergi, { delay: 100 }); 
 
             let secildiMi = false;
             for (let aramaDeneme = 1; aramaDeneme <= 12; aramaDeneme++) {
-                await delay(1500);
+                await belgenetBekle(1500);
                 secildiMi = await targetFrame.evaluate((arananNo) => {
                     const elms = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
                     const h = elms.find(e => e.innerText.includes(arananNo) && e.offsetParent !== null);
@@ -7523,7 +7885,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
                     const btn = Array.from(document.querySelectorAll('button')).find(b => b.id && b.id.includes('TuzelKisiEkle')) || document.querySelector('.add-icon')?.closest('button');
                     if (btn) btn.click();
                 });
-                await delay(2000);
+                await belgenetBekle(2000);
                 await belgenetTuzelKisiHizliKayit(page, targetFrame, temizVergi, adsoyad);
 
                 const zatenSecili = await targetFrame.evaluate((no) => {
@@ -7538,7 +7900,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
                         if (el) { el.focus(); el.value = no; el.dispatchEvent(new Event('input', { bubbles: true })); }
                     }, aramaKutusuId, temizVergi);
                     for (let d = 1; d <= 5; d++) {
-                        await delay(d === 1 ? 600 : 400);
+                        await belgenetBekle(d === 1 ? 600 : 400);
                         const bulundu = await targetFrame.evaluate((arananNo) => {
                             const elms = Array.from(document.querySelectorAll('.lovItemTitle, .lovItemDetail, .ui-autocomplete-item'));
                             const h = elms.find((e) => e.innerText.includes(arananNo) && e.offsetParent !== null);
@@ -7558,7 +7920,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
             const hazir = await belgenetSirketFormuDuzelt(page, targetFrame, { konuMetni: temizDosyaAdi, vkn: temizVergi });
             if (hazir) break;
             console.log(`⚠️ Form düzeltme ${f}. tur`);
-            await delay(800);
+            await belgenetBekle(800);
         }
 
         // 3️⃣ ANA KAYDET 
@@ -7616,7 +7978,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
             } catch (dbHata) { sqlBasarili = false; sqlHataMesaji = dbHata.message; }
 
             // 🔄 SIFIRLAMA
-            await delay(1000); 
+            await belgenetBekle(1000); 
             const yeniKayitBasarili = await targetFrame.evaluate(() => {
                 const butonlar = [...document.querySelectorAll('.ui-button, button, input[type="submit"], input[type="button"], a, span')];
                 let islemBtn = butonlar.find(el => el.offsetParent !== null && (el.innerText || '').trim().toUpperCase() === 'YENİ KAYIT');
@@ -7626,7 +7988,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
             });
 
             if (!yeniKayitBasarili) {
-                await delay(2000); 
+                await belgenetBekle(2000); 
                 await page.evaluate(() => {
                     const linkler = Array.from(document.querySelectorAll('a'));
                     const gelenEvrakLink = linkler.find(el => (el.innerText && el.innerText.includes('Gelen Evrak Kayıt')) || (el.title && el.title.includes('Shift + G')));
@@ -7634,7 +7996,7 @@ app.post('/api/belgenet-yukle-sirket', async (req, res) => {
                 });
             }
             
-            await delay(3500); 
+            await belgenetBekle(3500); 
             if (!res.headersSent) {
                 if (sqlBasarili) res.json({ success: true, belgenetNo: belgenetNo, message: `${temizVergi} numaralı şirket işlenmiştir.` });
                 else res.json({ success: false, message: `Hata: ${sqlHataMesaji}` });

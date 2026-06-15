@@ -232,7 +232,7 @@ function arsivKapat() {
 
 function tarimRehberModalAc() {
   const modal = document.getElementById('tarimRehberModal');
-  if (!modal) { window.open('/tarim-rehber.html', '_blank'); return; }
+  if (!modal) { window.open('tarim-rehber.html', '_blank'); return; }
   const cksKapat = document.getElementById('cksModalKapatBtn');
   if (cksKapat) cksKapat.style.display = 'none';
   const frame = document.getElementById('tarimRehberFrame');
@@ -242,14 +242,12 @@ function tarimRehberModalAc() {
 }
 
 function tarimRehberModalKapat() {
-  document.getElementById('tarimRehberModal').style.display = 'none';
+  const modal = document.getElementById('tarimRehberModal');
+  if (modal) modal.style.display = 'none';
   const frame = document.getElementById('tarimRehberFrame');
   if (frame) frame.src = '';
-  const cksModal = document.getElementById('cksModal');
   const cksKapat = document.getElementById('cksModalKapatBtn');
-  if (cksKapat && cksModal && cksModal.style.display === 'block') {
-    cksKapat.style.display = '';
-  }
+  if (cksKapat) cksKapat.style.display = '';
   document.body.style.overflow = '';
 }
 

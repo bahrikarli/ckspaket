@@ -818,6 +818,7 @@
 </a>
                     <a class="dropdown-item" onclick="cksEksikAc()"><i class="fas fa-user-slash"></i> ÇKS Yapılmayanlar</a>
                     <a class="dropdown-item" onclick="taramaIslemleriniBaslat()"><i class="fas fa-search-plus"></i> Tarama İşlemleri</a>
+                    <a class="dropdown-item" href="personel-pdf-havuz.html" onclick="pdfHavuzSayfasiAc(event)"><i class="fas fa-file-pdf"></i> PDF Havuzum</a>
                     <a class="dropdown-item" onclick="belgenetModaliniAc()"><i class="fas fa-folder-open"></i> Belgenet İşlemleri</a>
                 </div>
                 <div class="dropdown-col">
@@ -2590,12 +2591,16 @@ async function ciftciEkleFormAc() {
       pasifIller.forEach(x => { ilListe.innerHTML += `<option value="${x.İL}"></option>`; });
     }
 
-    // Varsayılan olarak KONYA / SARAYÖNÜ gelsin (Otomatik temizlemeyi kapatarak)
-    document.getElementById('yeni_il').value = 'KONYA';
-    yeniIlceDoldur(false); // Listeyi getir ama alt kutuları silme
-    
-    document.getElementById('yeni_ilce').value = 'SARAYÖNÜ';
-    yeniMahalleDoldur(false); // Listeyi getir ama alt kutuları silme
+    // Tanımlamalardaki varsayılan il / ilçe
+    if (typeof kurumAyarYukle === 'function') await kurumAyarYukle();
+    const varsayilanIl = typeof kurumIlSec === 'function' ? kurumIlSec(pasifIller) : (typeof kurumIlBuyuk === 'function' ? kurumIlBuyuk() : 'KONYA');
+    document.getElementById('yeni_il').value = varsayilanIl;
+    yeniIlceDoldur(false);
+    const varsayilanIlce = typeof kurumIlceSec === 'function'
+      ? kurumIlceSec(pasifIlceler.filter(x => (x.İL || '').trim().toLocaleUpperCase('tr-TR') === varsayilanIl.trim().toLocaleUpperCase('tr-TR')), varsayilanIl)
+      : (typeof kurumIlceBuyuk === 'function' ? kurumIlceBuyuk() : 'SARAYÖNÜ');
+    document.getElementById('yeni_ilce').value = varsayilanIlce;
+    yeniMahalleDoldur(false);
     
     // Mahalle/Köy boş kalsın
     document.getElementById('yeni_koy').value = '';
@@ -2996,12 +3001,14 @@ async function pasifAraziModalAc() {
       await pasifIlIlceMahalleYukle();
     }
     
-    // KONYA varsayılan olarak dolsun ve ilçeleri çekilsin
-    document.getElementById('pasifIl').value = 'KONYA';
-    pasifIlceDoldur(); 
-    
-    // SARAYÖNÜ varsayılan olarak dolsun ve mahalleleri çekilsin
-    document.getElementById('pasifIlce').value = 'SARAYÖNÜ';
+    if (typeof kurumAyarYukle === 'function') await kurumAyarYukle();
+    const varsayilanIl = typeof kurumIlSec === 'function' ? kurumIlSec(pasifIller) : (typeof kurumIlBuyuk === 'function' ? kurumIlBuyuk() : 'KONYA');
+    document.getElementById('pasifIl').value = varsayilanIl;
+    pasifIlceDoldur();
+    const varsayilanIlce = typeof kurumIlceSec === 'function'
+      ? kurumIlceSec(pasifIlceler.filter(x => (x.İL || '').trim().toLocaleUpperCase('tr-TR') === varsayilanIl.trim().toLocaleUpperCase('tr-TR')), varsayilanIl)
+      : (typeof kurumIlceBuyuk === 'function' ? kurumIlceBuyuk() : 'SARAYÖNÜ');
+    document.getElementById('pasifIlce').value = varsayilanIlce;
     pasifMahalleDoldur(); 
     
     // Mahalle kutusu boş kalsın (kullanıcı kendi seçecek)
@@ -4833,6 +4840,17 @@ function cksHavaIkon(kod) {
     return 'fa-cloud-sun';
 }
 
+function pdfHavuzSayfasiAc(e) {
+    if (e) e.preventDefault();
+    try {
+        if (window.parent && window.parent !== window) {
+            const btn = window.parent.document.getElementById('cksModalKapatBtn');
+            if (btn) btn.style.display = 'none';
+        }
+    } catch (_) {}
+    window.location.href = 'personel-pdf-havuz.html';
+}
+
 function cksTarimRehberAc() {
     try {
         if (window.parent && window.parent !== window && typeof window.parent.tarimRehberModalAc === 'function') {
@@ -5468,6 +5486,15 @@ html: `
 
         <div id="swal-tarama-ozet" style="background:#e8f4ec;border:1px solid #b8d4c4;border-radius:8px;padding:12px;margin-bottom:14px;"></div>
 
+        <div style="background:#eef4fb;border:1px solid #b8cce4;border-radius:8px;padding:12px;margin-bottom:14px;">
+            <h4 style="margin:0 0 6px;color:#1565c0;font-size:14px;"><i class="fas fa-robot"></i> Belgenet robot</h4>
+            <div style="margin-bottom:4px;">
+                <label style="font-weight:bold;color:#555;font-size:12px;">Kişiye Havale — personel adı</label>
+                <input id="swal-belgenet-havale-kisi" class="swal2-input" value="${(t.belgenetHavaleKisiAdi || 'BAHRİ KARLI').replace(/"/g, '&quot;')}" placeholder="BAHRİ KARLI" style="width:100%;margin:0;height:36px;font-size:13px;">
+                <p style="font-size:11px;color:#777;margin:4px 0 0;">Robot listede aramak için adın <b>ilk 3 harfini</b> yazar (ör. Bahri → BAH).</p>
+            </div>
+        </div>
+
         <div style="background:#f4f7f5;border:1px solid #d5e0d8;border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;">
             <h4 style="margin:0 0 6px;color:#004d00;font-size:14px;"><i class="fas fa-network-wired"></i> Ortak havuz ve sunucu</h4>
             <p style="font-size:11px;color:#555;margin:0 0 10px;line-height:1.4;">Tüm personel aynı havuza tarar; tarayıcıya <b>ağ yolu (UNC)</b> verilir — üstteki özetten kopyalayın.</p>
@@ -5523,7 +5550,8 @@ preConfirm: () => {
             yedekSunucuIp: document.getElementById('swal-yedek-ip').value.trim(),
             evrakTaramaIp: '',
             taramaKokKlasor: document.getElementById('swal-tarama-klasor').value.trim(),
-            taramaHavuzAdi: document.getElementById('swal-tarama-havuz').value.trim()
+            taramaHavuzAdi: document.getElementById('swal-tarama-havuz').value.trim(),
+            belgenetHavaleKisiAdi: document.getElementById('swal-belgenet-havale-kisi').value.trim()
         }
     }
 }

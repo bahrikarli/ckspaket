@@ -71,6 +71,7 @@
   </div>
 </div>
 
+<script src="/kurum-ayar-client.js"></script>
 <script>
 // --- SAYFA YÜKLENDİĞİNDE GÜNÜN TARİHİNİ İNPUTA ATA ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -88,6 +89,7 @@ let iller = [], ilceler = [], mahalleler = [];
 
 async function loadAll() {
   try {
+    if (typeof kurumAyarYukle === 'function') await kurumAyarYukle();
     [iller, ilceler, mahalleler] = await Promise.all([
       fetch('/api/IL').then(r => r.json()),
       fetch('/api/ILCE').then(r => r.json()),
@@ -106,7 +108,7 @@ function fillIl() {
   iller.forEach(x => {
     select.innerHTML += `<option value="${x.İL}">${x.İL}</option>`;
   });
-  select.value = "KONYA";
+  select.value = typeof kurumIlSec === 'function' ? kurumIlSec(iller) : (typeof kurumIlBuyuk === 'function' ? kurumIlBuyuk() : 'KONYA');
   fillIlce(); 
 }
 
@@ -126,9 +128,7 @@ function fillIlce() {
     select.innerHTML += `<option value="${x.İLÇE.trim()}">${x.İLÇE.trim()}</option>`;
   });
 
-  if (filt.find(x => x.İLÇE.trim() === 'SARAYÖNÜ')) {
-    select.value = 'SARAYÖNÜ';
-  }
+  select.value = typeof kurumIlceSec === 'function' ? kurumIlceSec(filt, il) : (typeof kurumIlceBuyuk === 'function' ? kurumIlceBuyuk() : 'SARAYÖNÜ');
   fillMahalle();
 }
 
@@ -308,8 +308,8 @@ async function raporGoster() {
     let satirlar = '';
     tikliler.forEach(item => {
       satirlar += `<tr style="height:21px;font-size:14px;">
-        <td style="padding:6px;">${item.il || 'KONYA'}</td>
-        <td style="padding:6px;">${item.ilçe || 'SARAYÖNÜ'}</td>
+        <td style="padding:6px;">${item.il || (typeof kurumIlBuyuk === 'function' ? kurumIlBuyuk() : 'KONYA')}</td>
+        <td style="padding:6px;">${item.ilçe || (typeof kurumIlceBuyuk === 'function' ? kurumIlceBuyuk() : 'SARAYÖNÜ')}</td>
         <td style="padding:6px;">${item.mahalle || ''}</td>
         <td style="padding:6px;text-align:center;">${item.ada === 0 ? 0 : item.ada || ''}</td>
         <td style="padding:6px;text-align:center;">${item.parsel === 0 ? 0 : item.parsel || ''}</td>

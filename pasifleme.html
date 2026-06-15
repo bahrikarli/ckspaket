@@ -82,6 +82,7 @@
   </div>
 </div>
 
+<script src="/kurum-ayar-client.js"></script>
 <script>
 // 1. PARAMETRELERİ YAKALA
 const params = new URLSearchParams(window.location.search);
@@ -156,12 +157,13 @@ async function yukle() {
 // Konum Yükleme
 async function loadLocations() {
   try {
+    if (typeof kurumAyarYukle === 'function') await kurumAyarYukle();
     const [a, b, c] = await Promise.all([fetch('/api/IL'), fetch('/api/ILCE'), fetch('/api/MAHALLE')]);
     iller = await a.json(); ilceler = await b.json(); mahalleler = await c.json();
     
     const ilSelect = document.getElementById('il');
     iller.forEach(x => ilSelect.innerHTML += `<option value="${x.İL}">${x.İL}</option>`);
-    ilSelect.value = 'KONYA'; 
+    ilSelect.value = typeof kurumIlSec === 'function' ? kurumIlSec(iller) : (typeof kurumIlBuyuk === 'function' ? kurumIlBuyuk() : 'KONYA');
     fillIlce();
   } catch (e) { console.log("Konum hatası"); }
 }
@@ -174,7 +176,8 @@ function fillIlce() {
   
   if(il) {
     ilceler.filter(x => x.İL?.trim() === il).forEach(x => ilceSelect.innerHTML += `<option value="${x.İLÇE.trim()}">${x.İLÇE.trim()}</option>`);
-    ilceSelect.value = 'SARAYÖNÜ'; 
+    const filt = ilceler.filter(x => x.İL?.trim() === il);
+    ilceSelect.value = typeof kurumIlceSec === 'function' ? kurumIlceSec(filt, il) : (typeof kurumIlceBuyuk === 'function' ? kurumIlceBuyuk() : 'SARAYÖNÜ');
   }
   fillMahalle();
 }

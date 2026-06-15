@@ -14,7 +14,9 @@ const VARSAYILAN = {
   evrakTaramaIp: '',
   chromeRobotPort: 9222,
   taramaKokKlasor: 'C:\\ckspaket\\taramalar',
-  taramaHavuzAdi: 'ckstaramalar'
+  taramaHavuzAdi: 'ckstaramalar',
+  /** Belgenet robot — Kişiye Havale (adın ilk 3 harfi aramada kullanılır) */
+  belgenetHavaleKisiAdi: 'BAHRİ KARLI'
 };
 
 function temizIp(ip) {
@@ -46,7 +48,8 @@ function sistemAyarBirlestir(kayitli) {
     evrakTaramaIp: temizIp(k.evrakTaramaIp),
     chromeRobotPort: sayiPort(k.chromeRobotPort, VARSAYILAN.chromeRobotPort),
     taramaKokKlasor: temizKlasor(k.taramaKokKlasor, VARSAYILAN.taramaKokKlasor),
-    taramaHavuzAdi: String(k.taramaHavuzAdi || VARSAYILAN.taramaHavuzAdi).trim() || VARSAYILAN.taramaHavuzAdi
+    taramaHavuzAdi: String(k.taramaHavuzAdi || VARSAYILAN.taramaHavuzAdi).trim() || VARSAYILAN.taramaHavuzAdi,
+    belgenetHavaleKisiAdi: String(k.belgenetHavaleKisiAdi || VARSAYILAN.belgenetHavaleKisiAdi).trim() || VARSAYILAN.belgenetHavaleKisiAdi
   };
 }
 

@@ -57,7 +57,7 @@ const PDFKitDocument = require('pdfkit');
 
 app.use(cors());
 app.use(express.json());
-// express.static(gercekKlasor) — ckspaket-sunucu.js dosya sonunda
+app.use(express.static(__dirname));
 // Uploads klasörü oluştur
 // 🎯 SİHİRLİ YOL BULUCU: Program .exe ise dışarıdaki gerçek klasörü, kod ise bulunduğu yeri bulur.
 const gercekKlasor = process.pkg ? path.dirname(process.execPath) : __dirname;
@@ -275,13 +275,9 @@ const sadeceAdminSayfa = (req, res, next) => {
 // GİRİŞ
 app.use('/api', require('./auth'));
 
-// CKS Paket — kurum adi, guncelleme bildirimi, health
-try {
-  const { registerCkspaketSunucu } = require('./ckspaket-sunucu');
-  registerCkspaketSunucu(app, { getPool, gercekKlasor, CKSPAKET_MOD, authenticateToken, sadeceAdmin });
-} catch (e) { console.warn('[ckspaket-sunucu]', e.message); }
-
 // TÜM SAYFALAR
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/anasayfa.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'anasayfa.html')));
 app.get('/dashboard.html', authenticateToken, sadeceAdmin, (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
 app.get('/mesajlar.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'mesajlar.html')));
 app.get('/profil.html', authenticateToken, (req, res) => res.sendFile(path.join(__dirname, 'profil.html')));
@@ -13852,9 +13848,6 @@ process.on('exit', selektorMobilKapat);
     console.log('QR ekranı: http://127.0.0.1:' + PORT + '/mesai-kart.html\n');
   };
 
-  if (CKSPAKET_MOD) {
-    try { require('./ckspaket-sunucu').registerCkspaketStatic(app, gercekKlasor); } catch (_) {}
-  }
   const dinle = (host) => new Promise((resolve, reject) => {
     const srv = http.createServer(app);
     srv.on('error', reject);

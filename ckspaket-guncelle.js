@@ -44,7 +44,8 @@ const KORU = new Set([
   'anasayfa.html', 'index.html', 'arsiv.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
   'sistem-ayar.js', 'config.js',
-  'kurum-sunucu.js', 'kurum-ayar.js', 'kurum-baslik.js', 'kurum-ayar-client.js'
+  'kurum-sunucu.js', 'kurum-ayar.js', 'kurum-baslik.js', 'kurum-ayar-client.js',
+  'ckspaket-sunucu.js', 'paket-guncelleme.js', 'git-guncelleme.js', 'ckspaket-surum-ui.js'
 ]);
 
 const TARAMA_ALT = ['ckstaramalar', '2026cks', '2027cks', 'ib', 'ibtaramalar'];
@@ -247,6 +248,40 @@ app.use('/taramalar', (req, res, next) => {
     /console\.log\("Veritabanına bağlandı!"\);/,
     "console.log('Veritabanına bağlandı:', dbConfig.database, `(${dbConfig.server})`);"
   );
+
+  // Erken static — HTML route onceligini bozar; dosya sonunda ckspaket-sunucu.js
+  s = s.replace(/\napp\.use\(express\.static\(__dirname\)\);\n/, '\n// express.static(gercekKlasor) — ckspaket-sunucu.js dosya sonunda\n');
+
+  if (!s.includes('registerCkspaketSunucu')) {
+    s = s.replace(
+      /app\.use\('\/api', require\('\.\/auth'\)\);\s*\n/,
+      `app.use('/api', require('./auth'));
+
+// CKS Paket — kurum adi, guncelleme bildirimi, health
+try {
+  const { registerCkspaketSunucu } = require('./ckspaket-sunucu');
+  registerCkspaketSunucu(app, { getPool, gercekKlasor, CKSPAKET_MOD, authenticateToken, sadeceAdmin });
+} catch (e) { console.warn('[ckspaket-sunucu]', e.message); }
+
+`
+    );
+  }
+
+  // / ve /anasayfa.html — kurum-sunucu.js (Bearer GET tasimaz)
+  s = s.replace(
+    /\napp\.get\('\/', \(req, res\) => res\.sendFile\(path\.join\(__dirname, 'index\.html'\)\)\);\s*\napp\.get\('\/anasayfa\.html', authenticateToken, \(req, res\) => res\.sendFile\(path\.join\(__dirname, 'anasayfa\.html'\)\)\);\s*\n/,
+    '\n'
+  );
+
+  if (!s.includes('registerCkspaketStatic')) {
+    s = s.replace(
+      /(\n  const dinle = \(host\) => new Promise)/,
+      `
+  if (CKSPAKET_MOD) {
+    try { require('./ckspaket-sunucu').registerCkspaketStatic(app, gercekKlasor); } catch (_) {}
+  }$1`
+    );
+  }
 
   yaz(p, s);
   console.log('  OK: server.js paket yamalari');

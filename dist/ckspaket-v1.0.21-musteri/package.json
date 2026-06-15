@@ -1,6 +1,6 @@
 {
   "name": "ckspaket",
-  "version": "1.0.22",
+  "version": "1.0.21",
   "description": "CKS Paket — Personel, Çiftçi Kayıt, Mesajlar, Arşiv (Odalar + ÇKS Dosyaları)",
   "main": "server.js",
   "scripts": {

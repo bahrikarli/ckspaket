@@ -163,59 +163,7 @@
         if (data.success && data.surum) return data.surum;
       }
     } catch (_) {}
-    try {
-      const sj = await fetch('/surum.json', { cache: 'no-store' });
-      if (sj.ok) {
-        const d = await sj.json();
-        return String(d.surum || d.version || '').trim();
-      }
-    } catch (_) {}
     return '';
-  }
-
-  async function githubGuncellemeKontrol(mevcutSurum) {
-    const mevcut = String(mevcutSurum || '').trim();
-    if (!mevcut) return null;
-    try {
-      let repo = 'bahrikarli/ckspaket';
-      let branch = 'main';
-      try {
-        const sj = await fetch('/surum.json', { cache: 'no-store' });
-        if (sj.ok) {
-          const d = await sj.json();
-          if (d.repo) {
-            repo = String(d.repo)
-              .replace(/^https?:\/\/github\.com\//i, '')
-              .replace(/\.git$/i, '')
-              .replace(/\/$/, '');
-          }
-          if (d.branch) branch = String(d.branch).trim();
-        }
-      } catch (_) {}
-      const url = `https://raw.githubusercontent.com/${repo}/${branch}/package.json?t=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) return null;
-      const pkg = await res.json();
-      const yeniSurum = String(pkg.version || '').trim();
-      if (!yeniSurum || surumKarsilastir(yeniSurum, mevcut) <= 0) return null;
-      let notlar = '';
-      try {
-        const sn = await fetch(`https://raw.githubusercontent.com/${repo}/${branch}/surum.json?t=${Date.now()}`, { cache: 'no-store' });
-        if (sn.ok) {
-          const sd = await sn.json();
-          notlar = sd.notlar || '';
-        }
-      } catch (_) {}
-      return {
-        guncellemeVar: true,
-        mevcutSurum: mevcut,
-        yeniSurum,
-        notlar,
-        yontem: 'github'
-      };
-    } catch (_) {
-      return null;
-    }
   }
 
   function surumKarsilastir(a, b) {
@@ -451,20 +399,11 @@
 
     surumCikButonuGoster();
 
-    let guncelleme = null;
     try {
-      const res = await fetch('/api/paket-guncelle-kontrol', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.guncellemeVar) guncelleme = data;
-      }
+      const res = await fetch('/api/paket-guncelle-kontrol');
+      const data = await res.json();
+      if (data.success && data.guncellemeVar) bannerGoster(data);
     } catch (_) {}
-
-    if (!guncelleme) {
-      const kurulu = await kuruluSurumOku();
-      guncelleme = await githubGuncellemeKontrol(kurulu);
-    }
-    if (guncelleme && guncelleme.guncellemeVar) bannerGoster(guncelleme);
   }
 
   if (document.readyState === 'loading') {

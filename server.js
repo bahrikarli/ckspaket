@@ -7012,9 +7012,7 @@ app.post('/api/belgenet-yukle', async (req, res) => {
         }
         await belgenetBekle(1000);
 
-        // =========================================================
         // 🎯 KONU KODU (240.02)
-        // =========================================================
         await belgenetKonuKoduDoldur(page, targetFrame);
 
         // ✍️ KONU METNİ

@@ -331,10 +331,9 @@ async function gitPullUygula(kok, koruFn) {
           const remotePkg = await githubDosyaOku(repoUrl, branch, 'package.json');
           const uzakSurum = String(remotePkg?.version || '').trim();
           if (uzakSurum && surumKarsilastir(uzakSurum, mevcut.surum) > 0) {
-            console.log('Git esit ama surum eski — dosyalar zorla guncelleniyor...');
-            gitCalistir(`git reset --hard origin/${branch}`, kok, true);
+            console.log('Surum eski — GitHub ZIP ile guncelleniyor (korunan dosyalar atlanir)...');
             if (typeof koruFn === 'function') koruFn('geri');
-            return { guncellendi: true, yontem: 'reset' };
+            return await githubZipGuncelle(kok, koruFn);
           }
         } catch (_) {}
       }

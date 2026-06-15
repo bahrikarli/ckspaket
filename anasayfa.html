@@ -137,11 +137,16 @@ kurumBaslikYukle({ titleSuffix: ' — CKS Paket' });
 const token = localStorage.getItem('token');
 if (!token) location.href = '/';
 
+const kayitliAd = localStorage.getItem('personelAd');
+if (kayitliAd) document.getElementById('isim').innerText = kayitliAd;
+
 fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
   .then(r => r.json())
   .then(d => {
     if(d.success) {
-      const tamAd = d.user.ad ? `${d.user.ad} ${d.user.soyad}` : d.user.kullaniciadi;
+      const ad = String(d.user.ad || '').trim();
+      const soyad = String(d.user.soyad || '').trim();
+      const tamAd = ad && soyad ? `${ad} ${soyad}` : (ad || soyad || d.user.kullaniciadi || 'Personel');
       document.getElementById('isim').innerText = tamAd;
       localStorage.setItem('personelAd', tamAd);
       if(d.user.rol === 'admin') {

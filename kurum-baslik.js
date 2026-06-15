@@ -45,8 +45,4 @@ async function kurumBaslikYukle(opts) {
   if (titleSuffix) document.title = ad + titleSuffix;
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => kurumBaslikYukle());
-} else {
-  kurumBaslikYukle();
-}
+// Sayfalar kendi kurumBaslikYukle() cagrisini yapar; otomatik cift yukleme yapma

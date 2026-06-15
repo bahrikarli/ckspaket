@@ -259,7 +259,7 @@ function buAyTakvim(urunAdi) {
 }
 
 function mountTarimRehber(app, { getPool, authenticateToken, mesaiWa }) {
-  app.get('/tarim-rehber.html', authenticateToken, (req, res) => {
+  app.get('/tarim-rehber.html', (req, res) => {
     res.sendFile(path.join(GercekKlasor, 'tarim-rehber.html'));
   });
 

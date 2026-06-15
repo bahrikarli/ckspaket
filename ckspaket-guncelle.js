@@ -41,7 +41,7 @@ const KOPYALA = [
 ];
 
 const KORU = new Set([
-  'anasayfa.html', 'index.html', 'arsiv.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'anasayfa.html', 'index.html', 'arsiv.html', 'ruhsat.html', 'tarim-rehber.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
   'sistem-ayar.js', 'config.js',
   'kurum-sunucu.js', 'kurum-ayar.js', 'kurum-baslik.js', 'kurum-ayar-client.js',
@@ -346,8 +346,55 @@ function cksHtmlPaketYamasi() {
 }`
     );
   }
+  if (!s.includes('swal-ruhsat-sekreter')) {
+    const ruhsatBlok = `
+        <div style="background:#f4faf0;border:1px solid #b8d4b8;border-radius:8px;padding:12px;margin-bottom:14px;">
+            <h4 style="margin:0 0 8px;color:#006400;font-size:14px;"><i class="fas fa-tractor"></i> Biçerdöver ruhsatı (matbu yazdırma)</h4>
+            <div style="display:flex;gap:10px;margin-bottom:4px;">
+                <div style="flex:1;">
+                    <label style="font-weight:bold;color:#555;font-size:12px;">Genel Sekreter</label>
+                    <input id="swal-ruhsat-sekreter" class="swal2-input" value="\${(t.ruhsatGenelSekreter || 'BAHRİ KARLI').replace(/"/g, '&quot;')}" placeholder="BAHRİ KARLI" style="width:100%;margin:0;height:36px;font-size:13px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-weight:bold;color:#555;font-size:12px;">Yön. Kur. Bşk.</label>
+                    <input id="swal-ruhsat-baskan" class="swal2-input" value="\${(t.ruhsatYonKurBaskani || 'ENGİN ÇELİK').replace(/"/g, '&quot;')}" placeholder="ENGİN ÇELİK" style="width:100%;margin:0;height:36px;font-size:13px;">
+                </div>
+            </div>
+            <p style="font-size:11px;color:#777;margin:4px 0 0;">Ruhsat ön yüzündeki imza alanlarına basılır. Kurum adı üstteki <b>Kurumsal</b> alandan gelir.</p>
+        </div>
+
+        `;
+    s = s.replace(
+      /<div style="background:#f4f7f5;border:1px solid #d5e0d8;border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;">\s*<h4 style="margin:0 0 6px;color:#004d00;font-size:14px;"><i class="fas fa-network-wired"><\/i> Ortak havuz/,
+      ruhsatBlok + '<div style="background:#f4f7f5;border:1px solid #d5e0d8;border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;">\n            <h4 style="margin:0 0 6px;color:#004d00;font-size:14px;"><i class="fas fa-network-wired"></i> Ortak havuz'
+    );
+  }
+  if (!s.includes('ruhsatGenelSekreter: document.getElementById')) {
+    s = s.replace(
+      /belgenetHavaleKisiAdi: document\.getElementById\('swal-belgenet-havale-kisi'\)\.value\.trim\(\)/,
+      `belgenetHavaleKisiAdi: document.getElementById('swal-belgenet-havale-kisi').value.trim(),
+            ruhsatGenelSekreter: document.getElementById('swal-ruhsat-sekreter').value.trim(),
+            ruhsatYonKurBaskani: document.getElementById('swal-ruhsat-baskan').value.trim()`
+    );
+  }
+  s = s.replace(
+    /function cksTarimRehberAc\(\) \{\s*try \{[\s\S]*?tarimRehberModalAc\(\);[\s\S]*?\} catch \(_\) \{\}\s*const modal/g,
+    'function cksTarimRehberAc() {\n    const modal'
+  );
   yaz(p, s);
   console.log('  OK: cks.html paket yamalari');
+}
+
+function tarimRehberPaketYamasi() {
+  const p = path.join(HEDEF, 'tarim-rehber.js');
+  if (!fs.existsSync(p)) return;
+  let s = oku(p);
+  s = s.replace(
+    "app.get('/tarim-rehber.html', authenticateToken, (req, res) =>",
+    "app.get('/tarim-rehber.html', (req, res) =>"
+  );
+  yaz(p, s);
+  console.log('  OK: tarim-rehber.js paket yamalari');
 }
 
 function dilekcePaketYamasi() {
@@ -444,6 +491,7 @@ console.log('');
 console.log('--- Paket yamalari ---');
 serverJsPaketYamasi();
 cksHtmlPaketYamasi();
+tarimRehberPaketYamasi();
 dilekcePaketYamasi();
 ibformPaketYamasi();
 bosTaramalarYapisi();

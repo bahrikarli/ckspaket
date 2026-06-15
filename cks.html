@@ -4868,12 +4868,6 @@ function pdfHavuzSayfasiAc(e) {
 }
 
 function cksTarimRehberAc() {
-    try {
-        if (window.parent && window.parent !== window && typeof window.parent.tarimRehberModalAc === 'function') {
-            window.parent.tarimRehberModalAc();
-            return;
-        }
-    } catch (_) {}
     const modal = document.getElementById('cksTarimRehberModal');
     const frame = document.getElementById('cksTarimRehberFrame');
     if (!modal || !frame) return;
@@ -5511,6 +5505,21 @@ html: `
             </div>
         </div>
 
+        <div style="background:#f4faf0;border:1px solid #b8d4b8;border-radius:8px;padding:12px;margin-bottom:14px;">
+            <h4 style="margin:0 0 8px;color:#006400;font-size:14px;"><i class="fas fa-tractor"></i> Biçerdöver ruhsatı (matbu yazdırma)</h4>
+            <div style="display:flex;gap:10px;margin-bottom:4px;">
+                <div style="flex:1;">
+                    <label style="font-weight:bold;color:#555;font-size:12px;">Genel Sekreter</label>
+                    <input id="swal-ruhsat-sekreter" class="swal2-input" value="${(t.ruhsatGenelSekreter || 'BAHRİ KARLI').replace(/"/g, '&quot;')}" placeholder="BAHRİ KARLI" style="width:100%;margin:0;height:36px;font-size:13px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-weight:bold;color:#555;font-size:12px;">Yön. Kur. Bşk.</label>
+                    <input id="swal-ruhsat-baskan" class="swal2-input" value="${(t.ruhsatYonKurBaskani || 'ENGİN ÇELİK').replace(/"/g, '&quot;')}" placeholder="ENGİN ÇELİK" style="width:100%;margin:0;height:36px;font-size:13px;">
+                </div>
+            </div>
+            <p style="font-size:11px;color:#777;margin:4px 0 0;">Ruhsat ön yüzündeki imza alanlarına basılır.</p>
+        </div>
+
         <div style="background:#f4f7f5;border:1px solid #d5e0d8;border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;">
             <h4 style="margin:0 0 6px;color:#004d00;font-size:14px;"><i class="fas fa-network-wired"></i> Ortak havuz ve sunucu</h4>
             <p style="font-size:11px;color:#555;margin:0 0 10px;line-height:1.4;">Tüm personel aynı havuza tarar; tarayıcıya <b>ağ yolu (UNC)</b> verilir — üstteki özetten kopyalayın.</p>
@@ -5567,7 +5576,9 @@ preConfirm: () => {
             evrakTaramaIp: '',
             taramaKokKlasor: document.getElementById('swal-tarama-klasor').value.trim(),
             taramaHavuzAdi: document.getElementById('swal-tarama-havuz').value.trim(),
-            belgenetHavaleKisiAdi: document.getElementById('swal-belgenet-havale-kisi').value.trim()
+            belgenetHavaleKisiAdi: document.getElementById('swal-belgenet-havale-kisi').value.trim(),
+            ruhsatGenelSekreter: document.getElementById('swal-ruhsat-sekreter').value.trim(),
+            ruhsatYonKurBaskani: document.getElementById('swal-ruhsat-baskan').value.trim()
         }
     }
 }

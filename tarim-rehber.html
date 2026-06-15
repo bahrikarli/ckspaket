@@ -166,8 +166,17 @@
 </div>
 
 <script>
-const token = localStorage.getItem('token');
-if (!token) location.href = '/';
+function tarimTokenAl() {
+  try {
+    return localStorage.getItem('token') || (window.parent !== window && window.parent.localStorage.getItem('token'));
+  } catch (_) {
+    return localStorage.getItem('token');
+  }
+}
+const token = tarimTokenAl();
+if (!token) {
+  try { (window.top !== window.self ? window.top : window).location.href = '/'; } catch (_) { location.href = '/'; }
+}
 
 if (new URLSearchParams(location.search).get('modal') === '1') {
   document.body.classList.add('modal-mod');

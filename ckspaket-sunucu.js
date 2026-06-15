@@ -26,7 +26,9 @@ const HTML_IFRAME_SAYFALAR = [
   'mesai-kart.html',
   'mesai-yoklama.html',
   'mesai-takip.html',
-  'mesai-zobis-hatirlatma-test.html'
+  'mesai-zobis-hatirlatma-test.html',
+  'ruhsat.html',
+  'tarim-rehber.html'
 ];
 
 function registerCkspaketHtmlSayfalari(app, gercekKlasor) {

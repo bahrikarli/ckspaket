@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Tüm Eksikler Raporu</title>
+<style>
+  body {font-family:Arial,sans-serif;margin:40px;line-height:1.6;background:white;color:black;}
+  h1 {text-align:center;font-size:32px;margin-bottom:40px;color:#c62828;font-weight:bold;}
+  table {width:100%;border-collapse:collapse;margin:20px 0;box-shadow:0 4px 15px rgba(0,0,0,0.1);}
+  th {background:#c62828;color:white;padding:16px;text-align:center;font-size:18px;}
+  td {padding:14px;border-bottom:1px solid #ddd;text-align:center;font-size:16px;}
+  tr:nth-child(even) {background:#fff8f8;}
+  tr:hover {background:#ffebee;}
+  .footer {text-align:center;margin-top:60px;font-size:14px;color:#666;}
+  @media print {
+    body {margin:20px;}
+  }
+</style>
+</head>
+<body onload="window.print()">
+
+<h1>TÜM EKSİKLER LİSTESİ</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dilekçe No</th>
+      <th>Adı Soyadı</th>
+      <th>Tc Kimlik No</th>
+      <th>Notlar</th>
+      <th>Kullanıcı</th>
+    </tr>
+  </thead>
+  <tbody id="liste">
+    <!-- JavaScript ile doldurulacak -->
+  </tbody>
+</table>
+
+<div class="footer">
+  Rapor Tarihi: <span id="raporTarih"></span><br>
+  Toplam Kayıt: <span id="toplamKayit">0</span>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) {
+  document.body.innerHTML = "<h2 style='text-align:center;color:red;'>Oturum kapalı!</h2>";
+}
+
+async function yukle() {
+  try {
+    // 1. Tüm eksikleri çek (tüm çiftçiler)
+    const eksikRes = await fetch('/api/tum-eksikler', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const eksikler = await eksikRes.json();
+
+    const tbody = document.getElementById('liste');
+    if (eksikler.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5">Henüz eksik girilmemiş.</td></tr>';
+      return;
+    }
+
+    eksikler.forEach(e => {
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>${e.dilekçeno || '-'}</strong></td>
+          <td>${e.adsoyad || 'BİLİNMEYEN'}</td>
+          <td>${e.tc || '-'}</td>
+          <td>${e.eksikler}</td>
+          <td>${e.kullanıcı || 'Bilinmeyen'}</td>
+        </tr>`;
+    });
+
+    // Rapor bilgisi
+    document.getElementById('raporTarih').textContent = new Date().toLocaleString('tr-TR');
+    document.getElementById('toplamKayit').textContent = eksikler.length;
+
+  } catch (err) {
+    document.getElementById('liste').innerHTML = '<tr><td colspan="5">Rapor yüklenemedi.</td></tr>';
+  }
+}
+
+yukle();
+</script>
+
+</body>
+</html>

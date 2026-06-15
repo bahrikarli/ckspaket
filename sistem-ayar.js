@@ -16,7 +16,10 @@ const VARSAYILAN = {
   taramaKokKlasor: 'C:\\ckspaket\\taramalar',
   taramaHavuzAdi: 'ckstaramalar',
   /** Belgenet robot — Kişiye Havale (adın ilk 3 harfi aramada kullanılır) */
-  belgenetHavaleKisiAdi: 'BAHRİ KARLI'
+  belgenetHavaleKisiAdi: 'BAHRİ KARLI',
+  /** Biçerdöver ruhsatı matbu yazdırma — imza blokları */
+  ruhsatGenelSekreter: 'BAHRİ KARLI',
+  ruhsatYonKurBaskani: 'ENGİN ÇELİK'
 };
 
 function temizIp(ip) {
@@ -49,7 +52,9 @@ function sistemAyarBirlestir(kayitli) {
     chromeRobotPort: sayiPort(k.chromeRobotPort, VARSAYILAN.chromeRobotPort),
     taramaKokKlasor: temizKlasor(k.taramaKokKlasor, VARSAYILAN.taramaKokKlasor),
     taramaHavuzAdi: String(k.taramaHavuzAdi || VARSAYILAN.taramaHavuzAdi).trim() || VARSAYILAN.taramaHavuzAdi,
-    belgenetHavaleKisiAdi: String(k.belgenetHavaleKisiAdi || VARSAYILAN.belgenetHavaleKisiAdi).trim() || VARSAYILAN.belgenetHavaleKisiAdi
+    belgenetHavaleKisiAdi: String(k.belgenetHavaleKisiAdi || VARSAYILAN.belgenetHavaleKisiAdi).trim() || VARSAYILAN.belgenetHavaleKisiAdi,
+    ruhsatGenelSekreter: String(k.ruhsatGenelSekreter || VARSAYILAN.ruhsatGenelSekreter).trim() || VARSAYILAN.ruhsatGenelSekreter,
+    ruhsatYonKurBaskani: String(k.ruhsatYonKurBaskani || VARSAYILAN.ruhsatYonKurBaskani).trim() || VARSAYILAN.ruhsatYonKurBaskani
   };
 }
 

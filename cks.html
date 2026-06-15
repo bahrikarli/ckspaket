@@ -415,6 +415,12 @@
     padding: 12px 8px;
     font-size: 15px;
 }
+#belgenetListBody tr[data-id]:hover {
+    background-color: #f0f7f2;
+}
+#bitenlerListBody tr[data-id]:hover {
+    background-color: #f0f7f2;
+}
 .kapat { 
     position: absolute; 
     top: 10px; right: 20px; 
@@ -1498,6 +1504,7 @@
         <div style="font-size: 12px; text-align: right; margin: 5px 0 15px 0; color: #666;">
             Tamamlanma Oranı: %<span id="taramaYuzdee">0</span>
         </div>
+        <p style="font-size:12px; color:#666; margin:0 0 10px 0;">💡 Robot sorun çıkardığında satıra çift tıklayarak manuel BelgeNet No girebilirsiniz.</p>
 
         <input type="hidden" id="duzenleKayitId">
 
@@ -2096,6 +2103,8 @@ function sekmeyiDegistir(tur) {
             tr.dataset.dogum = d.dogumtarihi || '';
             tr.dataset.adsoyad = d.adsoyad || 'Bilinmeyen Kişi';
             tr.dataset.sayfa = d.sayfasayisi || 1;
+            const belgeNo = d.belgenetnoo ?? d.belgenetno ?? '';
+            tr.dataset.belgenetno = (belgeNo === 0 || belgeNo === '0') ? '' : String(belgeNo);
 
             const robotButonu = aktifSekme === 'tuzel' 
                 ? `<button class="tekli-yukle-btn" style="background-color: #0d6efd; color: white; border: none; padding: 5px 12px; cursor: pointer; border-radius: 5px;" onclick="event.stopPropagation(); sirketiBelgeneteGonder('${d.vergino}', '${d.adsoyad}', '${d.dilekçeno}', '${d.dosyadı}', '${d.sayfasayisi}')">🏢 Şirket Yükle</button>`
@@ -2110,10 +2119,16 @@ function sekmeyiDegistir(tur) {
                 <td style="font-weight:bold;">${kimlikGosterimi}</td>
                 <td>${d.dosyadı || '-'}</td>
                 <td style="text-align:center;">${d.sayfasayisi ?? '0'}</td>
-                <td>${d.belgenetno || ''}</td> 
+                <td>${tr.dataset.belgenetno || ''}</td> 
                 <td style="font-size:11px; color:gray;">${d.bkullanici || '-'}</td>
                 <td style="text-align:center;">${robotButonu}</td>
             `;
+            tr.style.cursor = 'pointer';
+            tr.title = 'Manuel BelgeNet No girmek için çift tıklayın';
+            tr.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button, input, a, label')) return;
+                duzenleModaliniAc(tr);
+            });
             listBody.appendChild(tr);
         });
     } else {
@@ -2362,62 +2377,49 @@ async function sayaclariGuncelle() {
 }
 //belgenet düzenle modalı
 function duzenleModaliniAc(satir) {
-    // dataset.id içindeki değeri 'kimlik' değişkenine alıyoruz
     const kimlik = satir.dataset.id;
 
-    console.log("Düzenleme için alınan bkimlik:", kimlik);
-
-    // Kontrol
     if (!kimlik || isNaN(kimlik)) {
-        console.error("Satır dataset içeriği:", satir.dataset);
-        alert("Hata: Kayıt ID'si (bkimlik) alınamadı! Lütfen listeyi yenileyin.");
+        alert("Hata: Kayıt ID'si alınamadı! Lütfen listeyi yenileyin.");
         return;
     }
 
-    // Doğru değişken adını (kimlik) kullanıyoruz
-    const idInput = document.getElementById('duzenleKayitId');
-    if (idInput) {
-        idInput.value = kimlik; 
-    }
+    document.getElementById('duzenleKayitId').value = kimlik;
+    document.getElementById('editAd').value = satir.dataset.adsoyad || '';
+    document.getElementById('editTc').value = satir.dataset.tc || satir.dataset.vergino || '';
+    document.getElementById('editDosya').value = satir.dataset.dosya || '';
+    document.getElementById('editSayfaSayisi').value = satir.dataset.sayfa || '0';
+    document.getElementById('editBelgenetNo').value = satir.dataset.belgenetno || '';
 
-    // Inputları doldurma
-    document.getElementById('editAd').value = satir.cells[1]?.textContent?.trim() || '';
-    document.getElementById('editTc').value = satir.cells[2]?.textContent?.trim() || '';
-    document.getElementById('editDosya').value = satir.cells[3]?.textContent?.trim() || '';
-    document.getElementById('editSayfaSayisi').value = satir.cells[4]?.textContent?.trim() || '0';
-    document.getElementById('editBelgenetNo').value = satir.cells[5]?.textContent?.trim() || '';
-    
-    // Eğer varsa tarih alanı
     const tarihInput = document.getElementById('editBelgenetTarihi');
-    if (tarihInput) {
-        tarihInput.value = satir.cells[6]?.textContent?.trim() || '';
-    }
-
-    // Modalı göster
-    document.getElementById('duzenleModal').style.display = 'flex';
     const bugun = new Date().toISOString().split('T')[0];
     if (tarihInput) {
-        // Eğer veritabanından gelen bir tarih varsa onu yaz, yoksa bugünü yaz
-        const mevcutTarih = satir.cells[6]?.textContent?.trim();
+        const mevcutTarih = satir.dataset.belgenettarihi || '';
         tarihInput.value = (mevcutTarih && mevcutTarih !== '-') ? mevcutTarih : bugun;
     }
 
     document.getElementById('duzenleModal').style.display = 'flex';
-
+    const noInput = document.getElementById('editBelgenetNo');
+    noInput.focus();
+    noInput.select();
 }
 async function kaydiGuncelle() {
     const id = document.getElementById('duzenleKayitId').value;
     const b_no = document.getElementById('editBelgenetNo').value.trim();
     const s_sayisi = parseInt(document.getElementById('editSayfaSayisi').value) || 0;
     const token = localStorage.getItem('token');
+    const tarihInput = document.getElementById('editBelgenetTarihi');
+    const belgenetTarihi = tarihInput?.value?.trim() || new Date().toISOString().split('T')[0];
 
-    // Bugünü tarihini ISO formatında (YYYY-MM-DD) alalım
-    const bugun = new Date().toISOString().split('T')[0]; 
+    if (!b_no) {
+        alert("⚠️ BelgeNet No boş olamaz!");
+        return;
+    }
 
     const guncelVeri = {
         belgenetno: b_no,
         sayfasayisi: s_sayisi,
-        belgenettarihi: bugun // Otomatik tarih bilgisi eklendi
+        belgenettarihi: belgenetTarihi
     };
 
     try {
@@ -2434,8 +2436,13 @@ async function kaydiGuncelle() {
         if (data.success) {
             alert("✅ Kayıt ve Tarih başarıyla güncellendi.");
             document.getElementById('duzenleModal').style.display = 'none';
-            belgenetModaliniAc(); 
-            sayaclariGuncelle();  // Sayaçları veritabanından tekrar çeker (YENİ)
+            if (document.getElementById('belgenetModal')?.style.display === 'flex') {
+                belgenetModaliniAc();
+            }
+            if (document.getElementById('bitenlerModal')?.style.display === 'flex') {
+                bitenleriGoster();
+            }
+            sayaclariGuncelle();
 
         } else {
             alert("❌ Hata: " + data.message);
@@ -4611,32 +4618,41 @@ async function bitenleriGoster() {
         const liste = await res.json();
         
         if (Array.isArray(liste) && liste.length > 0) {
-            
-            let tabloHTML = ''; 
-            
+            listBody.innerHTML = '';
+
             liste.forEach(d => {
-                
-                // 🎯 1. TARİH DÜZELTME OPERASYONU
                 let duzgunTarih = '-';
+                let isoTarih = '';
                 if (d.belgenettarihi) {
                     const t = new Date(d.belgenettarihi);
-                    // tr-TR ile GG.AA.YYYY formatına çeviriyoruz (Örn: 03.04.2026)
-                    duzgunTarih = t.toLocaleDateString('tr-TR'); 
+                    duzgunTarih = t.toLocaleDateString('tr-TR');
+                    isoTarih = t.toISOString().split('T')[0];
                 }
 
-                tabloHTML += `
-                    <tr style="border-bottom: 1px solid #ddd; text-align: center;">
-                        <td style="padding: 10px; color: #555; font-weight: bold;">${duzgunTarih}</td>
-                        <td>${d.dilekçeno || '-'}</td>
-                        <td style="font-weight:bold; text-align: left;">${d.adsoyad || '-'}</td>
-                        <td>${d.tc || '-'}</td>
-                        <td style="text-align: left;">${d.dosyadı || '-'}</td> <td><span style="background:#d4edda; color:#155724; padding:3px 8px; border-radius:5px; font-weight:bold;">${d.belgenetno}</span></td>
-                        <td style="font-size:11px; color:gray;">${d.bkullanici || '-'}</td>
-                    </tr>
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #ddd';
+                tr.style.textAlign = 'center';
+                tr.dataset.id = d.bkimlik;
+                tr.dataset.adsoyad = d.adsoyad || '';
+                tr.dataset.tc = d.tc || '';
+                tr.dataset.dosya = d.dosyadı || '';
+                tr.dataset.sayfa = '0';
+                tr.dataset.belgenetno = d.belgenetno || '';
+                tr.dataset.belgenettarihi = isoTarih;
+                tr.style.cursor = 'pointer';
+                tr.title = 'BelgeNet No düzenlemek için çift tıklayın';
+                tr.innerHTML = `
+                    <td style="padding: 10px; color: #555; font-weight: bold;">${duzgunTarih}</td>
+                    <td>${d.dilekçeno || '-'}</td>
+                    <td style="font-weight:bold; text-align: left;">${d.adsoyad || '-'}</td>
+                    <td>${d.tc || '-'}</td>
+                    <td style="text-align: left;">${d.dosyadı || '-'}</td>
+                    <td><span style="background:#d4edda; color:#155724; padding:3px 8px; border-radius:5px; font-weight:bold;">${d.belgenetno}</span></td>
+                    <td style="font-size:11px; color:gray;">${d.bkullanici || '-'}</td>
                 `;
+                tr.addEventListener('dblclick', () => duzenleModaliniAc(tr));
+                listBody.appendChild(tr);
             });
-
-            listBody.innerHTML = tabloHTML; 
 
         } else {
             listBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;">Henüz girilen kayıt bulunmuyor.</td></tr>';

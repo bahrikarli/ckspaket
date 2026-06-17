@@ -90,6 +90,18 @@
         transition: 0.2s; 
     }
     .btn-danger:hover { background: #c82333; }
+    .btn-edit {
+        background: #006400;
+        color: white;
+        padding: 8px 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        margin-right: 6px;
+    }
+    .btn-edit:hover { background: #004d00; }
 
     .role-badge {
         padding: 5px 12px;
@@ -117,6 +129,7 @@
                 <th>Ad Soyad</th>
                 <th>E-posta</th>
                 <th>Rol</th>
+                <th>Tarama adı</th>
                 <th style="text-align: center;">İşlem</th>
             </tr>
         </thead>
@@ -183,7 +196,11 @@ async function yukle(){
           <td>${u.adsoyad}</td>
           <td>${u.email}</td>
           <td><span class="role-badge ${roleClass}">${rolStr.toUpperCase()}</span></td>
-          <td style="text-align: center;"><button class="btn-danger" onclick="sil(${u.id})"><i class="fas fa-trash-alt"></i> SİL</button></td>
+          <td><code>${u.taramaOnEk || u.kullaniciadi || '-'}</code></td>
+          <td style="text-align: center;">
+            <button class="btn-edit" onclick="duzenle(${u.id}, '${String(u.kullaniciadi || '').replace(/'/g, "\\'")}', '${String(u.taramaOnEk || u.kullaniciadi || '').replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> Düzenle</button>
+            <button class="btn-danger" onclick="sil(${u.id})"><i class="fas fa-trash-alt"></i> SİL</button>
+          </td>
         </tr>`;
     });
   } catch (err) {
@@ -201,12 +218,16 @@ async function yeniKullanici(){
   const soyad = prompt("Soyad:", "") || "";
   const email = prompt("E-posta:", "") || "";
   const rol = prompt("Rol (admin / user)", "user") || "user";
+  const taramaOnEk = prompt(
+    "Tarama dosya adı (havuzdaki PDF bu isimle başlamalı):\nBoş = kullanıcı adı kullanılır",
+    ka.trim()
+  );
 
   try {
       const res = await fetch('/api/yenikullanici', {
         method:'POST',
         headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
-        body:JSON.stringify({ka:ka.trim(), sifre:sifre||'12345', ad, soyad, email, rol})
+        body:JSON.stringify({ka:ka.trim(), sifre:sifre||'12345', ad, soyad, email, rol, taramaOnEk: (taramaOnEk || '').trim()})
       });
       
       if(res.ok) {
@@ -217,6 +238,30 @@ async function yeniKullanici(){
       }
   } catch (e) {
       alert("Bağlantı hatası yaşandı.");
+  }
+}
+
+async function duzenle(id, ka, mevcutOnEk) {
+  const taramaOnEk = prompt(
+    `"${ka}" için tarama dosya adı:\n(Havuzdaki PDF bu isimle başlamalı, örn: ${mevcutOnEk || ka}.pdf)`,
+    mevcutOnEk || ka
+  );
+  if (taramaOnEk === null) return;
+  try {
+    const res = await fetch('/api/kullanici/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ taramaOnEk: taramaOnEk.trim() })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('Tarama adı güncellendi.');
+      yukle();
+    } else {
+      alert(data.message || 'Güncellenemedi.');
+    }
+  } catch (_) {
+    alert('Bağlantı hatası.');
   }
 }
 

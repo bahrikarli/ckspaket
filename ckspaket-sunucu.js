@@ -74,6 +74,13 @@ function registerCkspaketSunucu(app, opts) {
   } catch (err) {
     console.warn('[paket-guncelleme]', err.message);
   }
+
+  try {
+    const { registerPaketAdmin } = require('./paket-admin');
+    registerPaketAdmin(app, { CKSPAKET_MOD, authenticateToken, sadeceAdmin, sql: require('mssql'), getPool });
+  } catch (err) {
+    console.warn('[paket-admin]', err.message);
+  }
 }
 
 function registerCkspaketStatic(app, gercekKlasor) {

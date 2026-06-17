@@ -22,6 +22,7 @@ function registerPaketAdmin(app, opts) {
       const ad = String(req.body.ad || '').trim();
       const soyad = String(req.body.soyad || '').trim();
       const email = String(req.body.email || '').trim();
+      const taramaOnEk = String(req.body.taramaOnEk || req.body.tarama_on_ek || '').trim();
       let rol = String(req.body.rol || 'user').toLowerCase().trim();
       if (!['admin', 'user'].includes(rol)) rol = 'user';
 
@@ -48,9 +49,10 @@ function registerPaketAdmin(app, opts) {
         .input('soyad', sql.NVarChar(50), soyad || null)
         .input('email', sql.NVarChar(100), email || null)
         .input('rol', sql.NVarChar(20), rol)
+        .input('taramaOnEk', sql.NVarChar(100), taramaOnEk || null)
         .query(`
-          INSERT INTO Kullanicilar (KullaniciAdi, sifre, Ad, Soyad, Email, rol)
-          VALUES (@ka, @sifre, @ad, @soyad, @email, @rol)
+          INSERT INTO Kullanicilar (KullaniciAdi, sifre, Ad, Soyad, Email, rol, TaramaOnEk)
+          VALUES (@ka, @sifre, @ad, @soyad, @email, @rol, @taramaOnEk)
         `);
 
       res.json({
@@ -70,7 +72,7 @@ function registerPaketAdmin(app, opts) {
       const id = parseInt(req.params.id, 10);
       if (!id) return res.status(400).json({ success: false, message: 'Geçersiz kullanıcı.' });
 
-      const { ad, soyad, email, rol, sifre } = req.body || {};
+      const { ad, soyad, email, rol, sifre, taramaOnEk, tarama_on_ek } = req.body || {};
       const pool = await getPool();
       const request = pool.request().input('id', sql.Int, id);
       const updates = [];
@@ -96,6 +98,11 @@ function registerPaketAdmin(app, opts) {
       if (sifre && String(sifre).trim()) {
         updates.push('sifre = @sifre');
         request.input('sifre', sql.NVarChar(255), String(sifre).trim());
+      }
+      if (taramaOnEk !== undefined || tarama_on_ek !== undefined) {
+        const v = String(taramaOnEk !== undefined ? taramaOnEk : tarama_on_ek).trim();
+        updates.push('TaramaOnEk = @taramaOnEk');
+        request.input('taramaOnEk', sql.NVarChar(100), v || null);
       }
 
       if (!updates.length) {

@@ -104,6 +104,21 @@ const {
 
 let sistemAyarCache = { ...SISTEM_AYAR_VARSAYILAN };
 let sistemAyarKolonHazir = false;
+let taramaOnEkKolonHazir = false;
+
+async function ensureTaramaOnEkKolon() {
+  if (taramaOnEkKolonHazir) return;
+  try {
+    const p = await getPool();
+    await p.request().query(`
+      IF COL_LENGTH('Kullanicilar', 'TaramaOnEk') IS NULL
+        ALTER TABLE Kullanicilar ADD TaramaOnEk NVARCHAR(100) NULL;
+    `);
+    taramaOnEkKolonHazir = true;
+  } catch (err) {
+    console.warn('TaramaOnEk kolonu kontrolü:', err.message);
+  }
+}
 
 async function ensureTeknikJsonKolon() {
   if (sistemAyarKolonHazir) return;
@@ -132,6 +147,7 @@ function sistemAyarPaketUygula() {
 
 async function sistemAyarDbYukle() {
   await ensureTeknikJsonKolon();
+  await ensureTaramaOnEkKolon();
   try {
     const p = await getPool();
     const r = await p.request().query('SELECT TOP 1 teknik_json FROM ayarlar ORDER BY id DESC');
@@ -221,11 +237,12 @@ const authenticateToken = (req, res, next) => {
     }
 
     try {
+      await ensureTaramaOnEkKolon();
       const pool = await getPool();
       const result = await pool.request()
         .input('id', sql.Int, decoded.id)
         // DİKKAT: rol SÜTUNU BURAYA EKLENDİ!
-        .query(`SELECT Id, KullaniciAdi, Ad, Soyad, rol FROM Kullanicilar WHERE Id = @id`);
+        .query(`SELECT Id, KullaniciAdi, Ad, Soyad, rol, ISNULL(TaramaOnEk,'') AS TaramaOnEk FROM Kullanicilar WHERE Id = @id`);
 
       if (result.recordset.length === 0) {
         // 404, tarayıcıda "endpoint yok" sanılmasın; oturum / kullanıcı kaydı geçersiz.
@@ -241,7 +258,8 @@ const authenticateToken = (req, res, next) => {
         kullaniciadi: u.KullaniciAdi,
         ad: u.Ad || '',
         soyad: u.Soyad || '',
-        rol: u.rol // DİKKAT: ARTIK ROL BİLGİSİ SUNUCU HAFIZASINA KAYDEDİLİYOR
+        rol: u.rol,
+        taramaOnEk: String(u.TaramaOnEk || '').trim()
       };
       next();
     } catch (dbErr) {
@@ -397,9 +415,11 @@ app.get('/api/me', authenticateToken, async (req, res) => {
 app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) => {
   try {
     const pool = await getPool();
+    await ensureTaramaOnEkKolon();
     const result = await pool.request().query(`
       SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
-             ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol
+             ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol,
+             ISNULL(NULLIF(LTRIM(RTRIM(TaramaOnEk)), ''), KullaniciAdi) AS taramaOnEk
       FROM Kullanicilar ORDER BY rol DESC, Ad
     `);
     res.json(result.recordset);
@@ -2115,62 +2135,36 @@ app.get('/api/tarama-sayaclar', authenticateToken, async (req, res) => {
 // BELGENET KAYIT VE TARAMA İŞLEMİ (ORİJİNAL SİSTEM)
 // ==========================================
 
-function belgenetRegexKacis(s) {
-    return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function belgenetDosyaAdiSay(dosyaAdi, yilOnEk, prefix, anaAd, ekRegex, durum) {
-    const d = String(dosyaAdi || '').replace(/\.pdf$/i, '').trim();
-    if (!d.startsWith(`${yilOnEk}-`)) return;
-    if (!d.startsWith(prefix)) return;
-    if (d === anaAd) {
-        durum.hasMain = true;
-        return;
-    }
-    const m = d.match(ekRegex);
-    if (m) durum.maxEk = Math.max(durum.maxEk, parseInt(m[1], 10));
-}
-
-async function belgenetSonrakiDosyaAdiOlustur(pool, kimlikid, aktifYil, dilekçeno, gecerliKimlikNo, arsivKlasor = null) {
+async function belgenetSonrakiDosyaAdiOlustur(pool, kimlikid, aktifYil, dilekçeno, gecerliKimlikNo, _arsivKlasor = null) {
     const yilOnEk = String(aktifYil);
     const yilNum = parseInt(yilOnEk, 10) || new Date().getFullYear();
     const prefix = `${yilOnEk}-${dilekçeno}-`;
     const anaAd = `${prefix}${gecerliKimlikNo}`;
-    const ekRegex = new RegExp(`^${belgenetRegexKacis(prefix)}EK-(\\d+)-${belgenetRegexKacis(gecerliKimlikNo)}$`, 'i');
 
+    // Eski özel dosya adlarına bakılmaz — sadece belgenet kayıt sayısı
     const r = await pool.request()
         .input('kid', sql.Int, kimlikid)
         .input('yil', sql.SmallInt, yilNum)
-        .input('yilStr', sql.NVarChar, yilOnEk)
-        .input('pfx', sql.NVarChar, prefix + '%')
         .query(`
-            SELECT dosyadı FROM belgenet
-            WHERE kimlikid = @kid
-              AND yil = @yil
-              AND dosyadı IS NOT NULL
-              AND dosyadı LIKE @pfx
-              AND LEFT(dosyadı, 4) = @yilStr
+            SELECT COUNT(*) AS adet FROM belgenet
+            WHERE kimlikid = @kid AND yil = @yil
         `);
 
-    const durum = { hasMain: false, maxEk: 0 };
-    for (const row of r.recordset) {
-        belgenetDosyaAdiSay(row.dosyadı, yilOnEk, prefix, anaAd, ekRegex, durum);
-    }
-
-    if (arsivKlasor && fs.existsSync(arsivKlasor)) {
-        for (const f of fs.readdirSync(arsivKlasor)) {
-            if (!f.toLowerCase().endsWith('.pdf')) continue;
-            belgenetDosyaAdiSay(f.replace(/\.pdf$/i, ''), yilOnEk, prefix, anaAd, ekRegex, durum);
-        }
-    }
-
-    if (!durum.hasMain) {
+    const toplamKayit = parseInt(r.recordset[0]?.adet, 10) || 0;
+    if (toplamKayit === 0) {
         return anaAd;
     }
-    return `${prefix}EK-${durum.maxEk + 1}-${gecerliKimlikNo}`;
+    // Ana dosya EK değil; mevcut kayıt adedi = sonraki EK numarası
+    return `${prefix}EK-${toplamKayit}-${gecerliKimlikNo}`;
 }
 
 function kullaniciTaramaOnEkleri(user) {
+    const ozel = String(user?.taramaOnEk || user?.TaramaOnEk || '').trim();
+    if (ozel) {
+        return [...new Set(
+            ozel.split(/[,;|]/).map((s) => s.trim()).filter(Boolean)
+        )];
+    }
     return [...new Set(
         [user?.kullaniciadi, user?.ad, user?.KullaniciAdi, user?.Ad]
             .map((s) => String(s || '').trim())

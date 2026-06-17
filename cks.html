@@ -5518,6 +5518,23 @@ html: `
                 </div>
             </div>
             <p style="font-size:11px;color:#777;margin:4px 0 0;">Ruhsat ön yüzündeki imza alanlarına basılır.</p>
+            <hr style="border:0;border-top:1px solid #d5e8d5;margin:12px 0 8px;">
+            <p style="font-size:11px;color:#555;margin:0 0 8px;font-weight:600;">TZOB Genelge — ücret / bağış (bilgi amaçlı)</p>
+            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:100px;"><label style="font-weight:bold;color:#555;font-size:11px;">Genelge No</label>
+                <input id="swal-ruhsat-genelge-no" class="swal2-input" value="${(t.ruhsatGenelgeNo || '2025 / 67').replace(/"/g, '&quot;')}" style="width:100%;margin:0;height:32px;font-size:12px;"></div>
+                <div style="flex:1;min-width:100px;"><label style="font-weight:bold;color:#555;font-size:11px;">Tarih</label>
+                <input id="swal-ruhsat-genelge-tarih" class="swal2-input" value="${(t.ruhsatGenelgeTarih || '26.12.2025').replace(/"/g, '&quot;')}" style="width:100%;margin:0;height:32px;font-size:12px;"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:90px;"><label style="font-weight:bold;color:#555;font-size:11px;">Plaka bağış (TL)</label>
+                <input id="swal-ruhsat-plaka-bagis" type="number" step="0.01" class="swal2-input" value="${t.ruhsatPlakaBagisBedeli || 2000}" style="width:100%;margin:0;height:32px;font-size:12px;"></div>
+                <div style="flex:1;min-width:90px;"><label style="font-weight:bold;color:#555;font-size:11px;">Tescil belgesi bağış (TL)</label>
+                <input id="swal-ruhsat-belge-bagis" type="number" step="0.01" class="swal2-input" value="${t.ruhsatBelgeBagisBedeli || 1600}" style="width:100%;margin:0;height:32px;font-size:12px;"></div>
+                <div style="flex:1;min-width:90px;"><label style="font-weight:bold;color:#555;font-size:11px;">Brüt asgari ücret (TL)</label>
+                <input id="swal-ruhsat-asgari-ucret" type="number" step="0.01" class="swal2-input" value="${t.ruhsatBrutAsgariUcret || 26005.5}" style="width:100%;margin:0;height:32px;font-size:12px;"></div>
+            </div>
+            <p style="font-size:10px;color:#888;margin:4px 0 0;">İşlem bedeli ruhsat ekranında brüt asgari ücretin %35'i olarak hesaplanır.</p>
         </div>
 
         <div style="background:#f4f7f5;border:1px solid #d5e0d8;border-radius:8px;padding:12px 12px 4px;margin-bottom:4px;">
@@ -5578,7 +5595,12 @@ preConfirm: () => {
             taramaHavuzAdi: document.getElementById('swal-tarama-havuz').value.trim(),
             belgenetHavaleKisiAdi: document.getElementById('swal-belgenet-havale-kisi').value.trim(),
             ruhsatGenelSekreter: document.getElementById('swal-ruhsat-sekreter').value.trim(),
-            ruhsatYonKurBaskani: document.getElementById('swal-ruhsat-baskan').value.trim()
+            ruhsatYonKurBaskani: document.getElementById('swal-ruhsat-baskan').value.trim(),
+            ruhsatGenelgeNo: document.getElementById('swal-ruhsat-genelge-no').value.trim(),
+            ruhsatGenelgeTarih: document.getElementById('swal-ruhsat-genelge-tarih').value.trim(),
+            ruhsatPlakaBagisBedeli: Number(document.getElementById('swal-ruhsat-plaka-bagis').value) || 2000,
+            ruhsatBelgeBagisBedeli: Number(document.getElementById('swal-ruhsat-belge-bagis').value) || 1600,
+            ruhsatBrutAsgariUcret: Number(document.getElementById('swal-ruhsat-asgari-ucret').value) || 26005.5
         }
     }
 }

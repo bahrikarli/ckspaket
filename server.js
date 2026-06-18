@@ -104,21 +104,6 @@ const {
 
 let sistemAyarCache = { ...SISTEM_AYAR_VARSAYILAN };
 let sistemAyarKolonHazir = false;
-let taramaOnEkKolonHazir = false;
-
-async function ensureTaramaOnEkKolon() {
-  if (taramaOnEkKolonHazir) return;
-  try {
-    const p = await getPool();
-    await p.request().query(`
-      IF COL_LENGTH('Kullanicilar', 'TaramaOnEk') IS NULL
-        ALTER TABLE Kullanicilar ADD TaramaOnEk NVARCHAR(100) NULL;
-    `);
-    taramaOnEkKolonHazir = true;
-  } catch (err) {
-    console.warn('TaramaOnEk kolonu kontrolü:', err.message);
-  }
-}
 
 async function ensureTeknikJsonKolon() {
   if (sistemAyarKolonHazir) return;
@@ -147,7 +132,6 @@ function sistemAyarPaketUygula() {
 
 async function sistemAyarDbYukle() {
   await ensureTeknikJsonKolon();
-  await ensureTaramaOnEkKolon();
   try {
     const p = await getPool();
     const r = await p.request().query('SELECT TOP 1 teknik_json FROM ayarlar ORDER BY id DESC');
@@ -241,7 +225,7 @@ const authenticateToken = (req, res, next) => {
       const result = await pool.request()
         .input('id', sql.Int, decoded.id)
         // DİKKAT: rol SÜTUNU BURAYA EKLENDİ!
-        .query(`SELECT Id, KullaniciAdi, Ad, Soyad, rol, TaramaOnEk FROM Kullanicilar WHERE Id = @id`);
+        .query(`SELECT Id, KullaniciAdi, Ad, Soyad, rol FROM Kullanicilar WHERE Id = @id`);
 
       if (result.recordset.length === 0) {
         // 404, tarayıcıda "endpoint yok" sanılmasın; oturum / kullanıcı kaydı geçersiz.
@@ -257,8 +241,7 @@ const authenticateToken = (req, res, next) => {
         kullaniciadi: u.KullaniciAdi,
         ad: u.Ad || '',
         soyad: u.Soyad || '',
-        rol: u.rol,
-        taramaOnEk: (u.TaramaOnEk || '').trim()
+        rol: u.rol // DİKKAT: ARTIK ROL BİLGİSİ SUNUCU HAFIZASINA KAYDEDİLİYOR
       };
       next();
     } catch (dbErr) {
@@ -333,7 +316,6 @@ app.get('/api/mesai/zobis-hatirlatma-test', (req, res) => {
 // MEVCUT KULLANICI – EMAIL DE GELECEK (%100 ÇALIŞIR)
 app.get('/api/me', authenticateToken, async (req, res) => {
   try {
-    await ensureTaramaOnEkKolon();
     const pool = await getPool();
     const result = await pool.request()
       .input('id', sql.Int, req.user.id)
@@ -344,8 +326,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
           ISNULL(Ad,'') AS Ad, 
           ISNULL(Soyad,'') AS Soyad,
           ISNULL(Email,'') AS Email,
-          ISNULL(rol,'user') AS rol,
-          ISNULL(TaramaOnEk, '') AS TaramaOnEk
+          ISNULL(rol,'user') AS rol 
         FROM Kullanicilar 
         WHERE Id = @id
       `);
@@ -390,8 +371,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
         ad: u.Ad,
         soyad: u.Soyad,
         email: u.Email.trim(),  // ← EMAIL BURADA, BOŞ OLMAYACAK
-        rol: u.rol,
-        taramaOnEk: (u.TaramaOnEk || '').trim()
+        rol: u.rol
       }
     });
   } catch (err) {
@@ -416,12 +396,10 @@ app.get('/api/me', authenticateToken, async (req, res) => {
 // PERSONEL PANELİ – TÜM KULLANICILAR
 app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) => {
   try {
-    await ensureTaramaOnEkKolon();
     const pool = await getPool();
     const result = await pool.request().query(`
       SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
-             ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol,
-             ISNULL(TaramaOnEk, '') AS taramaOnEk
+             ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol
       FROM Kullanicilar ORDER BY rol DESC, Ad
     `);
     res.json(result.recordset);
@@ -2193,12 +2171,6 @@ async function belgenetSonrakiDosyaAdiOlustur(pool, kimlikid, aktifYil, dilekçe
 }
 
 function kullaniciTaramaOnEkleri(user) {
-    const ozel = String(user?.taramaOnEk || user?.TaramaOnEk || '').trim();
-    if (ozel) {
-        return [...new Set(
-            ozel.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
-        )];
-    }
     return [...new Set(
         [user?.kullaniciadi, user?.ad, user?.KullaniciAdi, user?.Ad]
             .map((s) => String(s || '').trim())

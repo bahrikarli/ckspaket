@@ -8,16 +8,18 @@
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     
+    /* MODAL İÇİNE TAM UYUM İÇİN BODY AYARLARI */
     body { 
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-        background: transparent;
-        padding: 30px 40px;
+        background: transparent; /* Arka planı tamamen beyaz/şeffaf yaptık */
+        padding: 30px 40px; /* Çarpı butonuyla çakışmasın ve kenarlardan nefes alsın diye boşluk */
     }
     
     .container { 
         width: 100%; 
         margin: 0 auto; 
         background: transparent; 
+        /* Modalın kendisi zaten gölgeli olduğu için iç kutunun gölgesini kaldırdık */
         box-shadow: none; 
         border-radius: 0;
     }
@@ -54,17 +56,7 @@
     }
     .yeni-kullanici:hover { background: #004d00; transform: translateY(-2px); }
 
-    .bilgi-kutu {
-        background: #fff8e1;
-        border: 1px solid #ffe082;
-        border-radius: 8px;
-        padding: 12px 14px;
-        font-size: 12px;
-        line-height: 1.5;
-        color: #5d4037;
-        margin-bottom: 16px;
-    }
-
+    /* Tablo Tasarımı */
     table { 
         width: 100%; 
         border-collapse: collapse; 
@@ -98,18 +90,6 @@
         transition: 0.2s; 
     }
     .btn-danger:hover { background: #c82333; }
-    .btn-edit {
-        background: #006400;
-        color: white;
-        padding: 8px 14px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: bold;
-        margin-right: 6px;
-    }
-    .btn-edit:hover { background: #004d00; }
 
     .role-badge {
         padding: 5px 12px;
@@ -119,18 +99,6 @@
     }
     .role-admin { background: #ffeeba; color: #c00; }
     .role-user { background: #eef6ee; color: #006400; }
-
-    .tarama-ad {
-        font-family: Consolas, monospace;
-        font-size: 12px;
-        color: #1a5928;
-        font-weight: 700;
-    }
-    .tarama-ad-bos {
-        color: #999;
-        font-size: 12px;
-        font-style: italic;
-    }
   </style>
 </head>
 <body>
@@ -141,13 +109,6 @@
         <div class="yeni-kullanici" onclick="yeniKullanici()"><i class="fas fa-user-plus"></i> Yeni Ekle</div>
     </div>
 
-    <div class="bilgi-kutu">
-        <i class="fas fa-info-circle"></i>
-        <b>Tarama adı:</b> Tarayıcıdan havuza kaydedilen PDF dosya adının başında kullanılacak isim.
-        Örnek tarama adı <code>ahmet</code> ise dosya <code>ahmet.pdf</code> veya <code>ahmet-001.pdf</code> olmalı.
-        Boş bırakılırsa kullanıcı adı kullanılır. Birden fazla isim virgülle yazılabilir: <code>ahmet,ahm</code>
-    </div>
-
     <table id="tablo">
         <thead>
             <tr>
@@ -156,7 +117,6 @@
                 <th>Ad Soyad</th>
                 <th>E-posta</th>
                 <th>Rol</th>
-                <th>Tarama adı</th>
                 <th style="text-align: center;">İşlem</th>
             </tr>
         </thead>
@@ -168,8 +128,7 @@
 const token = localStorage.getItem('token');
 if (!token) location.href = '/';
 
-let personelListesi = [];
-
+// 1. Hoş geldin ismini yaz ve yetki kontrolü yap
 fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
   .then(r => r.json())
   .then(d => {
@@ -197,6 +156,7 @@ fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
       location.href = '/';
   });
 
+// 2. Personelleri tabloya yükle 
 async function yukle(){
   try {
     const res = await fetch('/api/kullanicilar', {headers:{Authorization:'Bearer '+token}});
@@ -207,31 +167,23 @@ async function yukle(){
     }
     
     const veri = await res.json();
-    personelListesi = Array.isArray(veri) ? veri : (veri.data || veri.kullanicilar || []);
+    const liste = Array.isArray(veri) ? veri : (veri.data || veri.kullanicilar || []);
     
     const tbody = document.querySelector('#tablo tbody');
     tbody.innerHTML = '';
     
-    personelListesi.forEach(u => {
+    liste.forEach(u => {
       const rolStr = String(u.rol || 'user').toLowerCase();
       const roleClass = rolStr === 'admin' ? 'role-admin' : 'role-user';
-      const taramaAd = (u.taramaOnEk || '').trim();
-      const taramaHtml = taramaAd
-        ? `<span class="tarama-ad">${esc(taramaAd)}</span>`
-        : `<span class="tarama-ad-bos">(${esc(u.kullaniciadi)})</span>`;
 
       tbody.innerHTML += `
         <tr>
           <td><strong>#${u.id}</strong></td>
-          <td>${esc(u.kullaniciadi)}</td>
-          <td>${esc(u.adsoyad)}</td>
-          <td>${esc(u.email)}</td>
+          <td>${u.kullaniciadi}</td>
+          <td>${u.adsoyad}</td>
+          <td>${u.email}</td>
           <td><span class="role-badge ${roleClass}">${rolStr.toUpperCase()}</span></td>
-          <td>${taramaHtml}</td>
-          <td style="text-align: center;">
-            <button class="btn-edit" onclick="kullaniciDuzenle(${u.id})"><i class="fas fa-edit"></i> Düzenle</button>
-            <button class="btn-danger" onclick="sil(${u.id})"><i class="fas fa-trash-alt"></i> SİL</button>
-          </td>
+          <td style="text-align: center;"><button class="btn-danger" onclick="sil(${u.id})"><i class="fas fa-trash-alt"></i> SİL</button></td>
         </tr>`;
     });
   } catch (err) {
@@ -240,10 +192,7 @@ async function yukle(){
   }
 }
 
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-}
-
+// Yeni kullanıcı
 async function yeniKullanici(){
   const ka = prompt("Kullanıcı adı:");
   if(!ka?.trim()) return;
@@ -252,68 +201,26 @@ async function yeniKullanici(){
   const soyad = prompt("Soyad:", "") || "";
   const email = prompt("E-posta:", "") || "";
   const rol = prompt("Rol (admin / user)", "user") || "user";
-  const taramaOnEk = prompt(
-    "Tarama dosya adı (PDF bu isimle başlamalı):\nBoş = kullanıcı adı kullanılır",
-  ka.trim()
-  ) || "";
 
   try {
       const res = await fetch('/api/yenikullanici', {
         method:'POST',
         headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
-        body:JSON.stringify({
-          ka: ka.trim(),
-          sifre: sifre || '12345',
-          ad,
-          soyad,
-          email,
-          rol,
-          taramaOnEk: taramaOnEk.trim()
-        })
+        body:JSON.stringify({ka:ka.trim(), sifre:sifre||'12345', ad, soyad, email, rol})
       });
-      const data = await res.json().catch(() => ({}));
       
-      if(res.ok && data.success !== false) {
-          alert(data.geciciSifre
-            ? "Personel eklendi.\nGeçici şifre: " + data.geciciSifre
-            : "Personel başarıyla eklendi!");
+      if(res.ok) {
+          alert("Personel başarıyla eklendi!");
           yukle();
       } else {
-          alert(data.message || "Personel eklenemedi, sunucu hatası!");
+          alert("Personel eklenemedi, sunucu hatası!");
       }
   } catch (e) {
       alert("Bağlantı hatası yaşandı.");
   }
 }
 
-async function kullaniciDuzenle(id) {
-  const u = personelListesi.find((x) => x.id === id);
-  if (!u) return;
-
-  const taramaOnEk = prompt(
-    `${u.kullaniciadi} için tarama dosya adı:\n(Boş = kullanıcı adı kullanılır)`,
-    (u.taramaOnEk || u.kullaniciadi || '').trim()
-  );
-  if (taramaOnEk === null) return;
-
-  try {
-    const res = await fetch('/api/kullanici/' + id, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ taramaOnEk: taramaOnEk.trim() })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.success === false) {
-      alert(data.message || 'Güncellenemedi.');
-      return;
-    }
-    alert('Tarama adı kaydedildi.');
-    yukle();
-  } catch (_) {
-    alert('Bağlantı hatası.');
-  }
-}
-
+// Sil
 async function sil(id){
   if(!confirm("Bu personeli silmek istediğine emin misin?")) return;
   try {

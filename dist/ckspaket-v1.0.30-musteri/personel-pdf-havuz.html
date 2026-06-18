@@ -131,67 +131,7 @@
       font-size: 14px;
     }
     .bos-durum i { font-size: 42px; color: #ccc; display: block; margin-bottom: 12px; }
-    .onizleme-icerik { padding: 0; position: relative; }
-    .onizleme-wrap {
-      position: relative;
-    }
-    .algilama-rozet {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 5;
-      max-width: min(320px, 90%);
-      background: rgba(255, 255, 255, 0.96);
-      border: 2px solid #006400;
-      border-radius: 10px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.18);
-      padding: 10px 12px;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-    .algilama-rozet.yukleniyor {
-      border-color: #90a4ae;
-      color: #546e7a;
-    }
-    .algilama-rozet.bos {
-      border-color: #ffe082;
-      background: #fffde7;
-      color: #6d4c41;
-    }
-    .algilama-rozet.tikla {
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .algilama-rozet.tikla:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 22px rgba(0,100,0,0.22);
-    }
-    .algilama-rozet .alg-baslik {
-      font-size: 10px;
-      font-weight: 800;
-      color: #006400;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 4px;
-    }
-    .algilama-rozet .alg-ad {
-      font-size: 14px;
-      font-weight: 700;
-      color: #1a5928;
-      word-break: break-word;
-    }
-    .algilama-rozet .alg-tc {
-      font-size: 12px;
-      color: #444;
-      margin-top: 2px;
-      font-family: Consolas, monospace;
-    }
-    .algilama-rozet .alg-aksiyon {
-      margin-top: 6px;
-      font-size: 11px;
-      color: #006400;
-      font-weight: 700;
-    }
+    .onizleme-icerik { padding: 0; }
     .onizleme-baslik {
       padding: 12px 16px;
       font-size: 12px;
@@ -263,8 +203,7 @@
 <div class="bilgi-kutu" style="max-width:1400px;margin:16px auto 0;">
   <i class="fas fa-info-circle"></i>
   Tarayıcıdan kaydettiğiniz PDF'ler ortak havuza düşer. Dosya adı <b>tarama adınızla</b> başlamalıdır
-  (ör. <code id="ornekAd">kullanici.pdf</code>). Önizlemede <b>TC ve isim algılanırsa</b> sağ üstte görünür; tıklayarak veya
-  <b>Çiftçiye ekle</b> ile manuel olarak aktarabilirsiniz.
+  (ör. <code id="ornekAd">kullanici.pdf</code>). Seçili PDF'yi <b>Çiftçiye ekle</b> ile doğrudan çiftçi kaydına aktarabilirsiniz.
   <span id="havuzYolEtiket" style="display:block;margin-top:6px;font-size:11px;color:#777;"></span>
 </div>
 
@@ -310,7 +249,6 @@ if (!token) { window.location.href = '/'; }
 
 let tumDosyalar = [];
 let seciliDosya = null;
-let algilananKisi = null;
 
 function authHdr() {
   return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
@@ -351,75 +289,6 @@ function onizlemeSrc(dosya) {
   return '/pdf-arsivi/' + encodeURIComponent(dosya) + '#toolbar=1&navpanes=0&scrollbar=1&zoom=page-width';
 }
 
-function algilamaRozetGoster(html, className) {
-  const el = document.getElementById('algilamaRozet');
-  if (!el) return;
-  el.className = 'algilama-rozet ' + (className || '');
-  el.innerHTML = html;
-}
-
-function algilamaRozetTemizle() {
-  algilananKisi = null;
-  algilamaRozetGoster('', 'gizli');
-  const el = document.getElementById('algilamaRozet');
-  if (el) el.style.display = 'none';
-}
-
-async function pdfAlgila(dosya) {
-  algilananKisi = null;
-  const el = document.getElementById('algilamaRozet');
-  if (el) {
-    el.style.display = 'block';
-    algilamaRozetGoster('<div class="alg-baslik">Algılanıyor</div><i class="fas fa-spinner fa-spin"></i> PDF okunuyor…', 'yukleniyor');
-  }
-  try {
-    const res = await fetch('/api/tarama-havuz-algila/' + encodeURIComponent(dosya), { headers: authHdr() });
-    const data = await res.json();
-    if (!data.success) {
-      algilamaRozetGoster('<div class="alg-baslik">Algılama</div>' + esc(data.message || 'Okunamadı'), 'bos');
-      return;
-    }
-    if (!data.algilandi) {
-      algilamaRozetGoster(
-        '<div class="alg-baslik">Algılama</div>' + esc(data.mesaj || 'TC / isim bulunamadı. Manuel ekleyin.'),
-        'bos'
-      );
-      return;
-    }
-    algilananKisi = {
-      kimlik: data.kimlik || null,
-      adSoyad: data.adSoyad || '',
-      tc: data.tc || '',
-      vergino: data.vergino || '',
-      guven: data.guven
-    };
-    const kimlikMetin = data.tc || data.vergino || '';
-    const tikla = data.kimlik
-      ? 'tikla'
-      : (kimlikMetin ? 'tikla' : 'bos');
-    const aksiyon = data.kimlik
-      ? '<div class="alg-aksiyon"><i class="fas fa-hand-pointer"></i> Tıkla — çiftçiye ekle</div>'
-      : (kimlikMetin
-        ? '<div class="alg-aksiyon"><i class="fas fa-hand-pointer"></i> Tıkla — kayıt ara</div>'
-        : '<div class="alg-aksiyon">Kayıt bulunamadı — manuel seçin</div>');
-    algilamaRozetGoster(
-      `<div class="alg-baslik">Algılanan kişi</div>
-       <div class="alg-ad">${esc(data.adSoyad || 'İsim bulunamadı')}</div>
-       ${kimlikMetin ? `<div class="alg-tc">${esc(kimlikMetin)}</div>` : ''}
-       ${aksiyon}`,
-      tikla
-    );
-    const rozet = document.getElementById('algilamaRozet');
-    if (rozet && tikla === 'tikla') {
-      rozet.onclick = () => algilananIleEkle();
-    } else if (rozet) {
-      rozet.onclick = null;
-    }
-  } catch (_) {
-    algilamaRozetGoster('<div class="alg-baslik">Algılama</div>Sunucuya bağlanılamadı', 'bos');
-  }
-}
-
 function satirSec(dosya) {
   seciliDosya = dosya;
   document.querySelectorAll('.pdf-satir').forEach(r => {
@@ -427,16 +296,10 @@ function satirSec(dosya) {
   });
   document.getElementById('onizlemeBaslik').textContent = dosya;
   document.getElementById('onizlemeAlani').innerHTML =
-    `<div class="onizleme-wrap">
-      <div id="algilamaRozet" class="algilama-rozet yukleniyor" style="display:block;">
-        <div class="alg-baslik">Algılanıyor</div><i class="fas fa-spinner fa-spin"></i>
-      </div>
-      <iframe id="onizlemeIframe" src="${onizlemeSrc(dosya)}" title="${esc(dosya)}"></iframe>
-    </div>`;
+    `<iframe id="onizlemeIframe" src="${onizlemeSrc(dosya)}" title="${esc(dosya)}"></iframe>`;
   document.getElementById('silBtn').disabled = false;
   document.getElementById('yeniSekmeBtn').disabled = false;
   document.getElementById('ciftciEkleBtn').disabled = false;
-  pdfAlgila(dosya);
 }
 
 function tabloCiz(liste) {
@@ -571,57 +434,9 @@ async function havuzCiftciAra(q) {
   } catch (_) { listeEl.innerHTML = '<div class="havuz-ciftci-bos">Arama yapılamadı</div>'; }
 }
 
-async function belgenetEkleIsle(kimlikid, yil) {
-  Swal.fire({ title: 'Ekleniyor…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-  try {
-    const res = await fetch('/api/belgenet-ekle', {
-      method: 'POST', headers: authHdr(),
-      body: JSON.stringify({ kimlikid, yil, havuzDosya: seciliDosya })
-    });
-    const data = await res.json();
-    if (!data.success) { await Swal.fire('Eklenemedi', data.message || 'Hata', 'error'); return false; }
-    await Swal.fire({ icon: 'success', title: 'Kayıt oluşturuldu', html: `<p style="font-size:13px;">Arşiv: <b>${esc(data.dosyadi)}.pdf</b></p>`, confirmButtonColor: '#006400' });
-    seciliDosya = null; algilananKisi = null; await listeyiYukle();
-    return true;
-  } catch (_) {
-    await Swal.fire('Hata', 'Sunucuya bağlanılamadı', 'error');
-    return false;
-  }
-}
-
-async function algilananIleEkle() {
-  if (!seciliDosya || !algilananKisi) return;
-  const varsayilanYil = localStorage.getItem('aktifCksYili') || String(new Date().getFullYear());
-
-  if (algilananKisi.kimlik) {
-    const onay = await Swal.fire({
-      title: 'Algılanan kişiye ekle',
-      html: `<p style="font-size:14px;"><b>${esc(algilananKisi.adSoyad)}</b><br><span style="font-family:monospace;">${esc(algilananKisi.tc || algilananKisi.vergino || '')}</span></p>
-        <label style="display:block;text-align:left;font-size:12px;font-weight:700;margin-top:10px;">Dönem yılı</label>
-        <input type="number" id="algYil" class="swal2-input" value="${esc(varsayilanYil)}" style="width:100%;margin:0;height:38px;">`,
-      showCancelButton: true,
-      confirmButtonText: 'Çiftçiye Ekle',
-      cancelButtonText: 'Vazgeç',
-      confirmButtonColor: '#006400',
-      preConfirm: () => {
-        const yil = document.getElementById('algYil')?.value;
-        if (!yil || isNaN(parseInt(yil, 10))) { Swal.showValidationMessage('Geçerli yıl girin'); return false; }
-        return parseInt(yil, 10);
-      }
-    });
-    if (!onay.isConfirmed) return;
-    await belgenetEkleIsle(algilananKisi.kimlik, onay.value);
-    return;
-  }
-
-  const arama = algilananKisi.tc || algilananKisi.vergino || algilananKisi.adSoyad || '';
-  await ciftciyeEkle({ onArama: arama });
-}
-
-async function ciftciyeEkle(opts) {
+async function ciftciyeEkle() {
   if (!seciliDosya) return;
   const varsayilanYil = localStorage.getItem('aktifCksYili') || String(new Date().getFullYear());
-  const onArama = (opts && opts.onArama) ? String(opts.onArama).trim() : '';
   havuzSeciliCiftci = null; havuzCiftciAramaSonuc = [];
   const sonuc = await Swal.fire({
     title: 'Çiftçiye PDF Ekle',
@@ -645,8 +460,7 @@ async function ciftciyeEkle(opts) {
       }
       let t = null; const inp = document.getElementById('havuzCiftciArama');
       inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => havuzCiftciAra(inp.value), 350); });
-      if (onArama) { inp.value = onArama; havuzCiftciAra(onArama); }
-      else inp.focus();
+      inp.focus();
     },
     preConfirm: () => {
       const yil = document.getElementById('havuzCiftciYil')?.value;
@@ -656,7 +470,17 @@ async function ciftciyeEkle(opts) {
     }
   });
   if (!sonuc.isConfirmed || !sonuc.value) return;
-  await belgenetEkleIsle(sonuc.value.kimlikid, sonuc.value.yil);
+  Swal.fire({ title: 'Ekleniyor…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  try {
+    const res = await fetch('/api/belgenet-ekle', {
+      method: 'POST', headers: authHdr(),
+      body: JSON.stringify({ kimlikid: sonuc.value.kimlikid, yil: sonuc.value.yil, havuzDosya: seciliDosya })
+    });
+    const data = await res.json();
+    if (!data.success) { await Swal.fire('Eklenemedi', data.message || 'Hata', 'error'); return; }
+    await Swal.fire({ icon: 'success', title: 'Kayıt oluşturuldu', html: `<p style="font-size:13px;">Arşiv: <b>${esc(data.dosyadi)}.pdf</b></p>`, confirmButtonColor: '#006400' });
+    seciliDosya = null; await listeyiYukle();
+  } catch (_) { await Swal.fire('Hata', 'Sunucuya bağlanılamadı', 'error'); }
 }
 
 fetch('/api/me', { headers: authHdr() })

@@ -344,11 +344,19 @@ function registerPaketGuncelleme(app, opts) {
 
         durumGuncelle(gercekKlasor, 25, 'Git commit + push yapılıyor…', 'git-push', 'yayinla');
 
+        let yayinlaLog = '';
         const child = spawn(process.execPath, args, {
           cwd: gercekKlasor,
           env: process.env,
           windowsHide: true,
           stdio: ['ignore', 'pipe', 'pipe']
+        });
+
+        child.stdout?.on('data', (buf) => {
+          yayinlaLog += buf.toString();
+        });
+        child.stderr?.on('data', (buf) => {
+          yayinlaLog += buf.toString();
         });
 
         child.on('close', (code) => {
@@ -363,7 +371,22 @@ function registerPaketGuncelleme(app, opts) {
               'yayinla'
             );
           } else {
-            durumBitir(gercekKlasor, false, `Git yayını başarısız (kod ${code})`, null, 'yayinla');
+            const son = yayinlaLog.trim().split(/\r?\n/).slice(-8).join('\n');
+            let mesaj = `Yayın başarısız (kod ${code})`;
+            if (/ENOSPC|no space left on device/i.test(yayinlaLog)) {
+              mesaj = 'Disk dolu — C: sürücüsünde yer açın (dist/, eski ZIP dosyaları)';
+            } else if (/git push|authentication|403|401/i.test(yayinlaLog)) {
+              mesaj = 'Git push başarısız — GitHub girişi / yetkisini kontrol edin';
+            } else if (/ckspaket-paketle|musteri surum/i.test(yayinlaLog)) {
+              mesaj = 'Müşteri paketi oluşturulamadı — ayrıntı için sunucu konsoluna bakın';
+            }
+            if (son) mesaj += '\n' + son;
+            try {
+              const logsDir = path.join(gercekKlasor, 'logs');
+              fs.mkdirSync(logsDir, { recursive: true });
+              fs.writeFileSync(path.join(logsDir, 'yayinla-son.log'), yayinlaLog, 'utf8');
+            } catch (_) {}
+            durumBitir(gercekKlasor, false, mesaj, null, 'yayinla');
           }
         });
 

@@ -361,7 +361,7 @@
         const durumData = await durumRes.json();
         const durum = durumData.durum;
         if (durum) {
-          modalGoster('Sürüm Çıkılıyor', durum.mesaj || 'Git\'e gönderiliyor…', durum.yuzde || 50);
+          modalGoster('Sürüm Çıkılıyor', durum.mesaj || 'Git\'e gönderiliyor…', durum.yuzde || 15);
           if (durum.bitti) {
             if (durum.hata) {
               modalHata(durum.mesaj || durum.hata);

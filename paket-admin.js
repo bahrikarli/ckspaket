@@ -16,6 +16,13 @@ function registerPaketAdmin(app, opts) {
   const { CKSPAKET_MOD, authenticateToken, sadeceAdmin, sql, getPool } = opts;
   if (!CKSPAKET_MOD) return;
 
+  async function ensureTaramaOnEkKolon(pool) {
+    await pool.request().query(`
+      IF COL_LENGTH('Kullanicilar', 'TaramaOnEk') IS NULL
+        ALTER TABLE Kullanicilar ADD TaramaOnEk NVARCHAR(100) NULL;
+    `);
+  }
+
   app.post('/api/yenikullanici', authenticateToken, sadeceAdmin, async (req, res) => {
     try {
       const ka = String(req.body.ka || req.body.kullaniciadi || '').trim();
@@ -35,6 +42,7 @@ function registerPaketAdmin(app, opts) {
       if (otomatik) sifre = geciciSifreOlustur();
 
       const pool = await getPool();
+      await ensureTaramaOnEkKolon(pool);
       const varMi = await pool.request()
         .input('ka', sql.NVarChar(50), ka)
         .query(`SELECT Id FROM Kullanicilar WHERE KullaniciAdi = @ka`);
@@ -74,6 +82,7 @@ function registerPaketAdmin(app, opts) {
 
       const { ad, soyad, email, rol, sifre, taramaOnEk, tarama_on_ek } = req.body || {};
       const pool = await getPool();
+      await ensureTaramaOnEkKolon(pool);
       const request = pool.request().input('id', sql.Int, id);
       const updates = [];
 
@@ -110,7 +119,14 @@ function registerPaketAdmin(app, opts) {
       }
 
       await request.query(`UPDATE Kullanicilar SET ${updates.join(', ')} WHERE Id = @id`);
-      res.json({ success: true, message: 'Kullanıcı güncellendi.' });
+      const kontrol = await pool.request()
+        .input('id', sql.Int, id)
+        .query(`SELECT ISNULL(TaramaOnEk, '') AS taramaOnEk FROM Kullanicilar WHERE Id = @id`);
+      res.json({
+        success: true,
+        message: 'Kullanıcı güncellendi.',
+        taramaOnEk: (kontrol.recordset[0]?.taramaOnEk || '').trim()
+      });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }

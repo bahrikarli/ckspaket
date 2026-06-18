@@ -44,7 +44,8 @@ const MUSTERI_HARIC = new Set([
   'ckspaket-guncelle.js',
   'ckspaket-guncelle.bat',
   'ckspaket-sync.bat',
-  'guncellemeler'
+  'guncellemeler',
+  'MUSTERIYE-VER'
 ]);
 
 const TARAMA_ALT = ['ckstaramalar', '2026cks', '2027cks', 'ib', 'ibtaramalar'];

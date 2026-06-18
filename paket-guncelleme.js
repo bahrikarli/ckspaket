@@ -342,7 +342,7 @@ function registerPaketGuncelleme(app, opts) {
         const args = ['ckspaket-yayinla.js'];
         if (notlar) args.push(notlar);
 
-        durumGuncelle(gercekKlasor, 25, 'Git commit + push yapılıyor…', 'git-push', 'yayinla');
+        durumGuncelle(gercekKlasor, 15, 'Sürüm artırılıyor…', 'surum', 'yayinla');
 
         let yayinlaLog = '';
         const child = spawn(process.execPath, args, {

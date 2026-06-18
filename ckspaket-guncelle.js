@@ -13,7 +13,6 @@ const KOPYALA = [
   'auth.js',
   'index.html',
   'cks.html',
-  'dashboard.html',
   'profil.html',
   'mesajlar.html',
   'mesaj-global.js',
@@ -36,12 +35,12 @@ const KOPYALA = [
   'bilgi.html',
   'tarim-rehber.js',
   'tarim-rehber.html',
-  'tarama-havuz-ui.js',
-  'personel-pdf-havuz.html'
+  'tarama-havuz-ui.js'
 ];
 
 const KORU = new Set([
   'anasayfa.html', 'index.html', 'arsiv.html', 'ruhsat.html', 'tarim-rehber.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
+  'dashboard.html', 'personel-pdf-havuz.html', 'paket-admin.js',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
   'sistem-ayar.js', 'config.js',
   'kurum-sunucu.js', 'kurum-ayar.js', 'kurum-baslik.js', 'kurum-ayar-client.js',
@@ -434,6 +433,96 @@ function ibformPaketYamasi() {
   console.log('  OK: ibform.html paket yamalari');
 }
 
+function serverJsTaramaOnEkYamasi() {
+  const p = path.join(HEDEF, 'server.js');
+  if (!fs.existsSync(p)) return;
+  let s = oku(p);
+
+  if (!s.includes('ensureTaramaOnEkKolon')) {
+    const taramaOnEkBlok = [
+      'let sistemAyarKolonHazir = false;',
+      'let taramaOnEkKolonHazir = false;',
+      '',
+      'async function ensureTaramaOnEkKolon() {',
+      '  if (taramaOnEkKolonHazir) return;',
+      '  try {',
+      '    const p = await getPool();',
+      '    await p.request().query(`',
+      "      IF COL_LENGTH('Kullanicilar', 'TaramaOnEk') IS NULL",
+      '        ALTER TABLE Kullanicilar ADD TaramaOnEk NVARCHAR(100) NULL;',
+      '    `);',
+      '    taramaOnEkKolonHazir = true;',
+      '  } catch (err) {',
+      "    console.warn('TaramaOnEk kolonu kontrolü:', err.message);",
+      '  }',
+      '}',
+      '',
+      'async function ensureTeknikJsonKolon()'
+    ].join('\n');
+    s = s.replace(
+      /let sistemAyarKolonHazir = false;\n\nasync function ensureTeknikJsonKolon\(\)/,
+      taramaOnEkBlok
+    );
+  }
+  if (!s.includes('await ensureTaramaOnEkKolon()')) {
+    s = s.replace(
+      /async function sistemAyarDbYukle\(\) \{\n  await ensureTeknikJsonKolon\(\);/,
+      'async function sistemAyarDbYukle() {\n  await ensureTeknikJsonKolon();\n  await ensureTaramaOnEkKolon();'
+    );
+  }
+  s = s.replace(
+    /\.query\(`SELECT Id, KullaniciAdi, Ad, Soyad, rol FROM Kullanicilar WHERE Id = @id`\);/,
+    ".query(`SELECT Id, KullaniciAdi, Ad, Soyad, rol, TaramaOnEk FROM Kullanicilar WHERE Id = @id`);"
+  );
+  if (!s.includes('taramaOnEk: (u.TaramaOnEk')) {
+    s = s.replace(
+      /rol: u\.rol \/\/ DİKKAT: ARTIK ROL BİLGİSİ SUNUCU HAFIZASINA KAYDEDİLİYOR/,
+      "rol: u.rol,\n        taramaOnEk: (u.TaramaOnEk || '').trim()"
+    );
+    s = s.replace(
+      /rol: u\.rol\n      \};/,
+      "rol: u.rol,\n        taramaOnEk: (u.TaramaOnEk || '').trim()\n      };"
+    );
+  }
+  if (!s.includes('const ozel = String(user?.taramaOnEk')) {
+    s = s.replace(
+      /function kullaniciTaramaOnEkleri\(user\) \{\n    return \[\.\.\.new Set\(\n        \[user\?\.kullaniciadi[\s\S]*?\)\];\n\}/,
+      `function kullaniciTaramaOnEkleri(user) {\n    const ozel = String(user?.taramaOnEk || user?.TaramaOnEk || '').trim();\n    if (ozel) {\n        return [...new Set(ozel.split(/[,;]/).map((s) => s.trim()).filter(Boolean))];\n    }\n    return [...new Set(\n        [user?.kullaniciadi, user?.ad, user?.KullaniciAdi, user?.Ad]\n            .map((s) => String(s || '').trim())\n            .filter(Boolean)\n    )];\n}`
+    );
+  }
+  if (!s.includes('ISNULL(TaramaOnEk')) {
+    s = s.replace(
+      /ISNULL\(rol,'user'\) AS rol \n        FROM Kullanicilar/,
+      "ISNULL(rol,'user') AS rol,\n          ISNULL(TaramaOnEk, '') AS TaramaOnEk\n        FROM Kullanicilar"
+    );
+    s = s.replace(
+      /ISNULL\(rol, 'user'\) AS rol\n      FROM Kullanicilar ORDER BY rol DESC, Ad/,
+      "ISNULL(rol, 'user') AS rol,\n             ISNULL(TaramaOnEk, '') AS taramaOnEk\n      FROM Kullanicilar ORDER BY rol DESC, Ad"
+    );
+  }
+  if (!s.includes("await ensureTaramaOnEkKolon();\n    const pool = await getPool();\n    const result = await pool.request()\n      .input('id', sql.Int, req.user.id)")) {
+    s = s.replace(
+      /app\.get\('\/api\/me', authenticateToken, async \(req, res\) => \{\n  try \{\n    const pool = await getPool\(\);/,
+      "app.get('/api/me', authenticateToken, async (req, res) => {\n  try {\n    await ensureTaramaOnEkKolon();\n    const pool = await getPool();"
+    );
+  }
+  if (!s.includes('taramaOnEk: (u.TaramaOnEk')) {
+    s = s.replace(
+      /email: u\.Email\.trim\(\),  \/\/ ← EMAIL BURADA, BOŞ OLMAYACAK\n        rol: u\.rol\n      \}/,
+      "email: u.Email.trim(),\n        rol: u.rol,\n        taramaOnEk: (u.TaramaOnEk || '').trim()\n      }"
+    );
+  }
+  if (!s.includes("await ensureTaramaOnEkKolon();\n    const pool = await getPool();\n    const result = await pool.request().query(`\n      SELECT Id AS id")) {
+    s = s.replace(
+      /app\.get\('\/api\/kullanicilar', authenticateToken, sadeceAdmin, async \(req, res\) => \{\n  try \{\n    const pool = await getPool\(\);/,
+      "app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) => {\n  try {\n    await ensureTaramaOnEkKolon();\n    const pool = await getPool();"
+    );
+  }
+
+  yaz(p, s);
+  console.log('  OK: server.js tarama adi yamalari');
+}
+
 console.log('=== CKS → CKS Paket Senkron ===');
 console.log('Kaynak:', KAYNAK);
 console.log('Hedef :', HEDEF);
@@ -490,6 +579,7 @@ if (fs.existsSync(tumEksikSrc)) {
 console.log('');
 console.log('--- Paket yamalari ---');
 serverJsPaketYamasi();
+serverJsTaramaOnEkYamasi();
 cksHtmlPaketYamasi();
 tarimRehberPaketYamasi();
 dilekcePaketYamasi();

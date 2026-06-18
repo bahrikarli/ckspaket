@@ -22,10 +22,25 @@ const {
 const KOK = __dirname;
 const CKS_KAYNAK = 'C:\\cks';
 
+let durumGuncelle = () => {};
+try {
+  ({ durumGuncelle } = require('./guncelleme-durum'));
+} catch (_) {}
+
+function yayinDurum(yuzde, mesaj, asama) {
+  try { durumGuncelle(KOK, yuzde, mesaj, asama || 'devam', 'yayinla'); } catch (_) {}
+}
+
 function calistir(komut, aciklama) {
   console.log('');
   console.log('---', aciklama, '---');
-  execSync(komut, { cwd: KOK, stdio: 'inherit' });
+  try {
+    execSync(komut, { cwd: KOK, stdio: 'inherit' });
+  } catch (err) {
+    const detay = err.stderr?.toString?.() || err.stdout?.toString?.() || err.message || String(err);
+    console.error('HATA:', aciklama, '-', detay.split('\n').slice(0, 12).join('\n'));
+    process.exit(err.status || 1);
+  }
 }
 
 function ipPortAl() {
@@ -57,7 +72,9 @@ const notlar = process.argv.slice(2).join(' ').trim() || 'Otomatik yayin';
 console.log('=== CKS Paket — TEK TUSLA YAYIN ===');
 console.log('Klasor:', KOK);
 
+yayinDurum(8, 'Ana CKS senkronu yapılıyor…', 'senkron');
 senkronYap();
+yayinDurum(18, 'Sürüm numarası artırılıyor…', 'surum');
 const surum = surumArtirVeYaz();
 surumJsonYaz(KOK, surum, notlar);
 const { ip, port } = ipPortAl();
@@ -66,6 +83,7 @@ process.env.CKS_SUNUCU_IP = ip;
 process.env.CKS_PORT = port;
 process.env.PORT = port;
 
+yayinDurum(35, 'Git commit + push yapılıyor…', 'git-push');
 const gitOk = gitYayinla(KOK, surum, notlar);
 const repoUrl = repoUrlAl(KOK);
 if (repoUrl) {
@@ -76,7 +94,9 @@ if (repoUrl) {
 if (gitOk) {
   console.log('');
   console.log('--- Musteri surum paketi (C:\\ckspaket) ---');
+  yayinDurum(55, 'Müşteri paketi oluşturuluyor (birkaç dakika sürebilir)…', 'paketle');
   calistir(`node ckspaket-paketle.js --musteri ${JSON.stringify(notlar)}`, 'Musteri klasor + ZIP');
+  yayinDurum(90, 'Paket tamamlanıyor…', 'bitir');
 }
 
 if (!gitOk) {

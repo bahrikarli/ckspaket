@@ -1,9 +1,8 @@
 {
-  "yuzde": 100,
-  "asama": "tamam",
-  "mesaj": "v1.0.31 GitHub'da — müşteriler güncelleyebilir",
-  "bitti": true,
+  "yuzde": 35,
+  "asama": "git-push",
+  "mesaj": "Git commit + push yapılıyor…",
+  "bitti": false,
   "hata": null,
-  "surum": "1.0.31",
-  "guncelleme": "2026-06-18T10:44:44.133Z"
+  "guncelleme": "2026-06-18T12:15:58.167Z"
 }

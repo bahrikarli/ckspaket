@@ -2073,11 +2073,61 @@ async function detayPaneliAc(dosyamiz, yilimiz, sayfamiz, tarihimiz, kisimiz) {
                 <b>👤 İşlem Yapan:</b> ${kisimiz}
             </div>
         `,
-        icon: 'info', showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#1a5928', confirmButtonText: '🗑️ Evrakı Sil', cancelButtonText: 'Kapat', reverseButtons: true
+        icon: 'info',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonColor: '#dc3545',
+        denyButtonColor: '#ff9800',
+        cancelButtonColor: '#1a5928',
+        confirmButtonText: '🗑️ Evrakı Sil',
+        denyButtonText: '↩️ Geri Al',
+        cancelButtonText: 'Kapat',
+        reverseButtons: true
     });
 
-    if (sonuc.isConfirmed) {
-        dosyayiYokEt(dosyamiz, yilimiz); // Yeni silme fonksiyonunu çağırır
+    if (sonuc.isDenied) {
+        evrakGeriAl(dosyamiz, yilimiz);
+    } else if (sonuc.isConfirmed) {
+        dosyayiYokEt(dosyamiz, yilimiz);
+    }
+}
+
+async function evrakGeriAl(hedefDosya, hedefYil) {
+    const onay = await Swal.fire({
+        title: 'Geri Al',
+        html: `<p style="font-size:14px;">PDF <b>ortak tarama havuzuna</b> taşınacak, dosya adı <b>tarama adınızla</b> yenilenecek ve tablo satırı silinecek.</p>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Geri Al',
+        confirmButtonColor: '#006400',
+        cancelButtonText: 'Vazgeç'
+    });
+    if (!onay.isConfirmed) return;
+
+    Swal.fire({ title: 'Geri alınıyor…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/belgenet-geri-al', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                dosyaadi: hedefDosya,
+                yil: hedefYil,
+                kimlikid: typeof kimlik !== 'undefined' ? kimlik : null
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await Swal.fire('Geri alındı', data.message || 'Havuza taşındı', 'success');
+            if (typeof taramaGecmisiYukle === 'function') taramaGecmisiYukle();
+        } else {
+            Swal.fire('Hata', data.message || 'Geri alınamadı', 'error');
+        }
+    } catch (_) {
+        Swal.fire('Hata', 'Sunucuya ulaşılamadı', 'error');
     }
 }
 
@@ -2150,10 +2200,21 @@ async function detayGoster(gelenDosya, gelenYil, gelenSayfa, gelenTarih, gelenKi
                 <b>👤 İşlem Yapan:</b> ${gelenKisi}
             </div>
         `,
-        icon: 'info', showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#1a5928', confirmButtonText: '🗑️ Evrakı Sil', cancelButtonText: 'Kapat', reverseButtons: true
+        icon: 'info',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonColor: '#dc3545',
+        denyButtonColor: '#ff9800',
+        cancelButtonColor: '#1a5928',
+        confirmButtonText: '🗑️ Evrakı Sil',
+        denyButtonText: '↩️ Geri Al',
+        cancelButtonText: 'Kapat',
+        reverseButtons: true
     });
 
-    if (sonuc.isConfirmed) {
+    if (sonuc.isDenied) {
+        evrakGeriAl(gelenDosya, gelenYil);
+    } else if (sonuc.isConfirmed) {
         dosyaSilAuth(gelenDosya, gelenYil);
     }
 }

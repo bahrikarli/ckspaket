@@ -88,6 +88,13 @@ function registerCkspaketSunucu(app, opts) {
   } catch (err) {
     console.warn('[pdf-havuz-algila]', err.message);
   }
+
+  try {
+    const { registerBelgenetGeriAl } = require('./belgenet-geri-al');
+    registerBelgenetGeriAl(app, { CKSPAKET_MOD, authenticateToken, getPool, sql: require('mssql') });
+  } catch (err) {
+    console.warn('[belgenet-geri-al]', err.message);
+  }
 }
 
 function registerCkspaketStatic(app, gercekKlasor) {

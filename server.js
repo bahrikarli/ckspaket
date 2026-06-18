@@ -104,21 +104,7 @@ const {
 
 let sistemAyarCache = { ...SISTEM_AYAR_VARSAYILAN };
 let sistemAyarKolonHazir = false;
-let taramaOnEkKolonHazir = false;
-
-async function ensureTaramaOnEkKolon() {
-  if (taramaOnEkKolonHazir) return;
-  try {
-    const p = await getPool();
-    await p.request().query(`
-      IF COL_LENGTH('Kullanicilar', 'TaramaOnEk') IS NULL
-        ALTER TABLE Kullanicilar ADD TaramaOnEk NVARCHAR(100) NULL;
-    `);
-    taramaOnEkKolonHazir = true;
-  } catch (err) {
-    console.warn('TaramaOnEk kolonu kontrolü:', err.message);
-  }
-}
+const { registerPersonelAdmin, ensureTaramaOnEkKolon } = require('./personel-admin');
 
 async function ensureTeknikJsonKolon() {
   if (sistemAyarKolonHazir) return;
@@ -150,6 +136,7 @@ async function sistemAyarDbYukle() {
   await ensureTaramaOnEkKolon();
   try {
     const p = await getPool();
+    await ensureTaramaOnEkKolon(p);
     const r = await p.request().query('SELECT TOP 1 teknik_json FROM ayarlar ORDER BY id DESC');
     const ham = r.recordset[0]?.teknik_json;
     if (ham) {
@@ -325,6 +312,7 @@ const { mountTarimRehber } = require('./tarim-rehber');
 const { registerKonumYonetim } = require('./konum-yonetim');
 mountTarimRehber(app, { getPool, authenticateToken, mesaiWa });
 registerKonumYonetim(app, { getPool, authenticateToken, sadeceAdmin, sql });
+registerPersonelAdmin(app, { authenticateToken, sadeceAdmin, sql, getPool });
 
 /** Tarayıcı adres çubuğu GET — test sayfasına yönlendir */
 app.get('/api/mesai/zobis-hatirlatma-test', (req, res) => {
@@ -335,6 +323,7 @@ app.get('/api/me', authenticateToken, async (req, res) => {
   try {
     await ensureTaramaOnEkKolon();
     const pool = await getPool();
+    await ensureTaramaOnEkKolon(pool);
     const result = await pool.request()
       .input('id', sql.Int, req.user.id)
       .query(`
@@ -389,8 +378,9 @@ app.get('/api/me', authenticateToken, async (req, res) => {
         kullaniciadi: u.KullaniciAdi,
         ad: u.Ad,
         soyad: u.Soyad,
-        email: u.Email.trim(),  // ← EMAIL BURADA, BOŞ OLMAYACAK
-        rol: u.rol
+        email: u.Email.trim(),
+        rol: u.rol,
+        taramaOnEk: (u.TaramaOnEk || '').trim()
       }
     });
   } catch (err) {
@@ -417,6 +407,7 @@ app.get('/api/kullanicilar', authenticateToken, sadeceAdmin, async (req, res) =>
   try {
     await ensureTaramaOnEkKolon();
     const pool = await getPool();
+    await ensureTaramaOnEkKolon(pool);
     const result = await pool.request().query(`
       SELECT Id AS id, KullaniciAdi AS kullaniciadi, ISNULL(Ad + ' ' + Soyad, '-') AS adsoyad,
              ISNULL(Email, '-') AS email, ISNULL(rol, 'user') AS rol,
@@ -2349,6 +2340,24 @@ app.delete('/api/tarama-havuz-pdf/:dosya', authenticateToken, (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
+});
+
+const { registerPdfHavuzAlgila } = require('./pdf-havuz-algila-sunucu');
+registerPdfHavuzAlgila(app, {
+    authenticateToken,
+    getPool,
+    sql,
+    havuzYolFn: () => taramaHavuzYol(sistemAyarAl()),
+    havuzPdfKullaniciyaAit
+});
+
+const { registerBelgenetGeriAl } = require('./belgenet-geri-al');
+registerBelgenetGeriAl(app, {
+    authenticateToken,
+    getPool,
+    sql,
+    sistemAyarFn: sistemAyarAl,
+    kullaniciTaramaOnEkleri
 });
 
 app.post('/api/belgenet-ekle', authenticateToken, async (req, res) => {

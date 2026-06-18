@@ -81,13 +81,6 @@ function registerCkspaketSunucu(app, opts) {
   } catch (err) {
     console.warn('[paket-admin]', err.message);
   }
-
-  try {
-    const { registerPdfHavuzAlgila } = require('./pdf-havuz-algila-sunucu');
-    registerPdfHavuzAlgila(app, { CKSPAKET_MOD, authenticateToken, getPool, sql: require('mssql') });
-  } catch (err) {
-    console.warn('[pdf-havuz-algila]', err.message);
-  }
 }
 
 function registerCkspaketStatic(app, gercekKlasor) {

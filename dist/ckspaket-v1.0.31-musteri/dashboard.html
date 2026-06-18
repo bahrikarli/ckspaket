@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personel Paneli</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        background: transparent;
+        padding: 30px 40px;
+    }
+    .container { width: 100%; margin: 0 auto; background: transparent; box-shadow: none; border-radius: 0; }
+    .header-area {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid #e9ecef; padding-bottom: 15px; margin-bottom: 25px;
+    }
+    .header-area h2 { color: #006400; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+    .yeni-kullanici { 
+        background: #006400; color: white; padding: 10px 22px; font-size: 14px; border-radius: 6px; 
+        cursor: pointer; transition: 0.2s; font-weight: bold; display: flex; align-items: center; gap: 8px;
+    }
+    .yeni-kullanici:hover { background: #004d00; transform: translateY(-2px); }
+    .bilgi-kutu {
+        background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px;
+        padding: 12px 14px; font-size: 12px; line-height: 1.5; color: #5d4037; margin-bottom: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background: #f8f9fa; color: #495057; padding: 16px; font-size: 14px; text-align: left; border-bottom: 2px solid #dee2e6; }
+    td { padding: 16px; font-size: 14px; color: #333; border-bottom: 1px solid #eee; }
+    tr:hover { background: #f8f9fa; }
+    .btn-danger { background: #dc3545; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+    .btn-danger:hover { background: #c82333; }
+    .btn-edit { background: #006400; color: white; padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-right: 6px; }
+    .btn-edit:hover { background: #004d00; }
+    .role-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .role-admin { background: #ffeeba; color: #c00; }
+    .role-user { background: #eef6ee; color: #006400; }
+    .tarama-ad { font-family: Consolas, monospace; font-size: 12px; color: #1a5928; font-weight: 700; }
+    .tarama-ad-bos { color: #999; font-size: 12px; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-area">
+        <h2><i class="fas fa-users-cog"></i> Personel Yönetim Paneli</h2>
+        <div class="yeni-kullanici" onclick="yeniKullanici()"><i class="fas fa-user-plus"></i> Yeni Ekle</div>
+    </div>
+
+    <div class="bilgi-kutu">
+        <i class="fas fa-info-circle"></i>
+        <b>Tarama adı:</b> Tarayıcıdan havuza kaydedilen PDF dosya adının başında kullanılacak isim.
+        Örnek: <code>ahmet.pdf</code>. Boş bırakılırsa kullanıcı adı kullanılır. Virgülle birden fazla: <code>ahmet,ahm</code>
+    </div>
+
+    <table id="tablo">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Kullanıcı Adı</th>
+                <th>Ad Soyad</th>
+                <th>E-posta</th>
+                <th>Rol</th>
+                <th>Tarama adı</th>
+                <th style="text-align: center;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/';
+
+let personelListesi = [];
+
+fetch('/api/me', {headers:{Authorization:'Bearer '+token}})
+  .then(r => r.json())
+  .then(d => {
+    if(d.success) {
+      const ad = d.user.Ad || d.user.ad || '';
+      const soyad = d.user.Soyad || d.user.soyad || '';
+      const ka = d.user.KullaniciAdi || d.user.kullaniciadi || 'Personel';
+      localStorage.setItem('aktifPersonelIsmi', (ad || soyad) ? `${ad} ${soyad}`.trim() : ka);
+      if(String(d.user.rol || '').toLowerCase() === 'admin') yukle();
+      else { alert("Bu panele sadece adminler erişebilir!"); location.href = 'anasayfa.html'; }
+    } else location.href = '/';
+  })
+  .catch(() => location.href = '/');
+
+async function yukle(){
+  try {
+    const res = await fetch('/api/kullanicilar', {headers:{Authorization:'Bearer '+token}});
+    if (!res.ok) throw new Error((await res.json()).message || 'Yetkisiz erişim!');
+    personelListesi = await res.json();
+    if (!Array.isArray(personelListesi)) personelListesi = personelListesi.data || personelListesi.kullanicilar || [];
+    const tbody = document.querySelector('#tablo tbody');
+    tbody.innerHTML = '';
+    personelListesi.forEach(u => {
+      const rolStr = String(u.rol || 'user').toLowerCase();
+      const taramaAd = (u.taramaOnEk || '').trim();
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>#${u.id}</strong></td>
+          <td>${esc(u.kullaniciadi)}</td>
+          <td>${esc(u.adsoyad)}</td>
+          <td>${esc(u.email)}</td>
+          <td><span class="role-badge ${rolStr === 'admin' ? 'role-admin' : 'role-user'}">${rolStr.toUpperCase()}</span></td>
+          <td>${taramaAd ? `<span class="tarama-ad">${esc(taramaAd)}</span>` : `<span class="tarama-ad-bos">(${esc(u.kullaniciadi)})</span>`}</td>
+          <td style="text-align:center;">
+            <button class="btn-edit" onclick="kullaniciDuzenle(${u.id})"><i class="fas fa-edit"></i> Düzenle</button>
+            <button class="btn-danger" onclick="sil(${u.id})"><i class="fas fa-trash-alt"></i> SİL</button>
+          </td>
+        </tr>`;
+    });
+  } catch (err) { alert('Kullanıcılar yüklenemedi: ' + err.message); }
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+async function yeniKullanici(){
+  const ka = prompt("Kullanıcı adı:");
+  if(!ka?.trim()) return;
+  const sifre = prompt("Şifre (boş = 12345)", "12345");
+  const ad = prompt("Ad:", "") || "";
+  const soyad = prompt("Soyad:", "") || "";
+  const email = prompt("E-posta:", "") || "";
+  const rol = prompt("Rol (admin / user)", "user") || "user";
+  const taramaOnEk = prompt("Tarama dosya adı (PDF bu isimle başlamalı):\nBoş = kullanıcı adı", ka.trim()) || "";
+  try {
+    const res = await fetch('/api/yenikullanici', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body:JSON.stringify({ ka: ka.trim(), sifre: sifre||'12345', ad, soyad, email, rol, taramaOnEk: taramaOnEk.trim() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if(res.ok && data.success !== false) { alert(data.geciciSifre ? 'Eklendi. Geçici şifre: '+data.geciciSifre : 'Personel eklendi!'); yukle(); }
+    else alert(data.message || 'Eklenemedi.');
+  } catch (_) { alert('Bağlantı hatası.'); }
+}
+
+async function kullaniciDuzenle(id) {
+  const u = personelListesi.find(x => Number(x.id) === Number(id));
+  if (!u) { alert('Kullanıcı bulunamadı.'); return; }
+
+  const sonuc = await Swal.fire({
+    title: 'Tarama Adı Düzenle',
+    html: `
+      <p style="font-size:13px;color:#555;margin:0 0 12px;text-align:left;">
+        <b>${esc(u.kullaniciadi)}</b> — tarayıcıdan kaydedilen PDF bu isimle başlamalı
+        (ör. <code>ahmet.pdf</code>). Boş bırakırsanız kullanıcı adı kullanılır.
+      </p>
+      <input id="swal-tarama-ad" class="swal2-input" value="${esc((u.taramaOnEk || '').trim())}"
+        placeholder="${esc(u.kullaniciadi)}" style="width:100%;margin:0;height:42px;font-size:15px;">
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Kaydet',
+    cancelButtonText: 'Vazgeç',
+    confirmButtonColor: '#006400',
+    focusConfirm: false,
+    didOpen: () => {
+      const inp = document.getElementById('swal-tarama-ad');
+      if (inp) { inp.focus(); inp.select(); }
+    },
+    preConfirm: () => document.getElementById('swal-tarama-ad')?.value ?? ''
+  });
+
+  if (!sonuc.isConfirmed) return;
+
+  try {
+    const res = await fetch('/api/kullanici/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ taramaOnEk: String(sonuc.value || '').trim() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success === false) {
+      await Swal.fire('Kaydedilemedi', data.message || ('Sunucu hatası: ' + res.status), 'error');
+      return;
+    }
+    await Swal.fire({ icon: 'success', title: 'Kaydedildi', text: 'Tarama adı güncellendi.', timer: 1800, showConfirmButton: false });
+    yukle();
+  } catch (_) {
+    await Swal.fire('Hata', 'Sunucuya bağlanılamadı.', 'error');
+  }
+}
+
+async function sil(id){
+  if(!confirm("Bu personeli silmek istediğine emin misin?")) return;
+  try {
+    const res = await fetch('/api/sil/'+id, {method:'DELETE', headers:{Authorization:'Bearer '+token}});
+    if(res.ok) yukle(); else alert('Silinemedi.');
+  } catch(_) { alert('Bağlantı hatası.'); }
+}
+</script>
+</body>
+</html>

@@ -370,7 +370,7 @@ async function pdfAlgila(dosya) {
   const el = document.getElementById('algilamaRozet');
   if (el) {
     el.style.display = 'block';
-    algilamaRozetGoster('<div class="alg-baslik">Algılanıyor</div><i class="fas fa-spinner fa-spin"></i> PDF okunuyor (gerekirse OCR)…', 'yukleniyor');
+    algilamaRozetGoster('<div class="alg-baslik">Algılanıyor</div><i class="fas fa-spinner fa-spin"></i> PDF okunuyor…', 'yukleniyor');
   }
   try {
     const res = await fetch('/api/tarama-havuz-algila/' + encodeURIComponent(dosya), { headers: authHdr() });
@@ -380,9 +380,8 @@ async function pdfAlgila(dosya) {
       return;
     }
     if (!data.algilandi) {
-      const ocrNot = data.ocrKullanildi ? ' (OCR denendi)' : '';
       algilamaRozetGoster(
-        '<div class="alg-baslik">Algılama' + ocrNot + '</div>' + esc(data.mesaj || 'TC / isim bulunamadı. Manuel ekleyin.'),
+        '<div class="alg-baslik">Algılama</div>' + esc(data.mesaj || 'TC / isim bulunamadı. Manuel ekleyin.'),
         'bos'
       );
       return;
@@ -395,7 +394,6 @@ async function pdfAlgila(dosya) {
       guven: data.guven
     };
     const kimlikMetin = data.tc || data.vergino || '';
-    const kaynakEtiket = data.ocrKullanildi ? 'OCR (1. sayfa)' : (data.kaynak === 'pdf_metin' ? 'PDF metni' : 'Dosya adı');
     const tikla = data.kimlik
       ? 'tikla'
       : (kimlikMetin ? 'tikla' : 'bos');
@@ -405,7 +403,7 @@ async function pdfAlgila(dosya) {
         ? '<div class="alg-aksiyon"><i class="fas fa-hand-pointer"></i> Tıkla — kayıt ara</div>'
         : '<div class="alg-aksiyon">Kayıt bulunamadı — manuel seçin</div>');
     algilamaRozetGoster(
-      `<div class="alg-baslik">Algılanan kişi <span style="font-weight:400;opacity:.75;">(${esc(kaynakEtiket)})</span></div>
+      `<div class="alg-baslik">Algılanan kişi</div>
        <div class="alg-ad">${esc(data.adSoyad || 'İsim bulunamadı')}</div>
        ${kimlikMetin ? `<div class="alg-tc">${esc(kimlikMetin)}</div>` : ''}
        ${aksiyon}`,

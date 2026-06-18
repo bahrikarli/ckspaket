@@ -1,10 +1,7 @@
 /**
- * PDF metninden / OCR (1. sayfa) / dosya adından TC ve isim çıkarma
+ * PDF metninden veya dosya adından TC / isim çıkarma (tarama havuzu)
  */
 const fs = require('fs');
-
-let ocrWorker = null;
-let ocrWorkerHazirlaniyor = null;
 
 function sadeceRakam(s) {
   return String(s || '').replace(/\D/g, '');
@@ -81,35 +78,6 @@ function dosyadanKimlikNoCikar(dosyaAdi) {
   return null;
 }
 
-function metinKatmanindanOku(sonuc) {
-  if (typeof sonuc === 'string') return sonuc;
-  if (sonuc && typeof sonuc.text === 'string') return sonuc.text;
-  if (sonuc?.pages?.length) return sonuc.pages.map((p) => p.text || '').join('\n');
-  return '';
-}
-
-function screenshotToBuffer(page) {
-  if (!page) return null;
-  const d = page.data ?? page.imageBuffer ?? page;
-  if (Buffer.isBuffer(d)) return d;
-  if (d instanceof Uint8Array) return Buffer.from(d);
-  if (d && typeof d === 'object') return Buffer.from(Object.values(d));
-  return null;
-}
-
-async function ocrWorkerAl() {
-  if (ocrWorker) return ocrWorker;
-  if (ocrWorkerHazirlaniyor) return ocrWorkerHazirlaniyor;
-  ocrWorkerHazirlaniyor = (async () => {
-    const { createWorker } = require('tesseract.js');
-    const w = await createWorker('tur+eng', 1, { logger: () => {} });
-    ocrWorker = w;
-    ocrWorkerHazirlaniyor = null;
-    return w;
-  })();
-  return ocrWorkerHazirlaniyor;
-}
-
 async function pdfMetinOku(pdfYol) {
   try {
     const buf = fs.readFileSync(pdfYol);
@@ -117,37 +85,18 @@ async function pdfMetinOku(pdfYol) {
     const parser = new PDFParse(new Uint8Array(buf));
     const sonuc = await parser.getText();
     if (typeof parser.destroy === 'function') await parser.destroy();
-    return metinKatmanindanOku(sonuc);
+    if (typeof sonuc === 'string') return sonuc;
+    if (sonuc && typeof sonuc.text === 'string') return sonuc.text;
+    return String(sonuc || '');
   } catch (_) {
     return '';
   }
 }
 
-/** Yalnızca 1. sayfa — taranmış PDF için OCR */
-async function pdfIlkSayfaOcr(pdfYol) {
-  try {
-    const buf = fs.readFileSync(pdfYol);
-    const { PDFParse } = require('pdf-parse');
-    const parser = new PDFParse(new Uint8Array(buf));
-    const shot = await parser.getScreenshot({ partial: [1], desiredWidth: 1500 });
-    if (typeof parser.destroy === 'function') await parser.destroy();
-
-    const png = screenshotToBuffer(shot?.pages?.[0]);
-    if (!png || png.length < 80) return '';
-
-    const worker = await ocrWorkerAl();
-    const { data } = await worker.recognize(png);
-    return String(data?.text || '').trim();
-  } catch (err) {
-    console.warn('PDF OCR (1. sayfa):', err.message);
-    return '';
-  }
-}
-
-function pdfIcerikAlgila(metin, dosyaAdi, kaynakZorla) {
+function pdfIcerikAlgila(metin, dosyaAdi) {
   let tc = metindenTcBul(metin);
   let vergino = null;
-  let kaynak = kaynakZorla || 'pdf_metin';
+  let kaynak = 'pdf_metin';
   let adSoyad = metindenIsimBul(metin, tc);
 
   if (!tc) {
@@ -171,9 +120,9 @@ function pdfIcerikAlgila(metin, dosyaAdi, kaynakZorla) {
     };
   }
 
-  let guven = kaynak === 'ocr' ? 'orta' : 'dusuk';
+  let guven = 'dusuk';
   if (kaynak === 'pdf_metin' && tc) guven = 'orta';
-  if ((kaynak === 'pdf_metin' || kaynak === 'ocr') && tc && adSoyad) guven = 'orta';
+  if (kaynak === 'pdf_metin' && tc && adSoyad) guven = 'orta';
 
   return {
     algilandi: true,
@@ -186,38 +135,6 @@ function pdfIcerikAlgila(metin, dosyaAdi, kaynakZorla) {
   };
 }
 
-function algilamaYeterliMi(alg) {
-  return Boolean(alg?.algilandi && (alg.tc || alg.vergino));
-}
-
-async function pdfDosyaAlgila(pdfYol, dosyaAdi) {
-  const metinKatman = await pdfMetinOku(pdfYol);
-  let algilama = pdfIcerikAlgila(metinKatman, dosyaAdi);
-  let ocrKullanildi = false;
-
-  const metinAz = String(metinKatman).replace(/\s+/g, '').length < 40;
-  const tcYok = !algilama.tc && !algilama.vergino;
-
-  if (!algilamaYeterliMi(algilama) || (metinAz && tcYok)) {
-    const ocrMetin = await pdfIlkSayfaOcr(pdfYol);
-    if (ocrMetin) {
-      ocrKullanildi = true;
-      const ocrAlg = pdfIcerikAlgila(ocrMetin, dosyaAdi, 'ocr');
-      if (algilamaYeterliMi(ocrAlg) || (!algilamaYeterliMi(algilama) && ocrAlg.algilandi)) {
-        algilama = ocrAlg;
-      } else if (!algilama.adSoyad && ocrAlg.adSoyad) {
-        algilama = { ...algilama, adSoyad: ocrAlg.adSoyad, kaynak: 'ocr' };
-      }
-    }
-  }
-
-  return {
-    algilama,
-    ocrKullanildi,
-    metinKatmanVar: Boolean(String(metinKatman).trim())
-  };
-}
-
 module.exports = {
   sadeceRakam,
   gecerliTc,
@@ -225,7 +142,5 @@ module.exports = {
   metindenIsimBul,
   dosyadanKimlikNoCikar,
   pdfMetinOku,
-  pdfIlkSayfaOcr,
-  pdfIcerikAlgila,
-  pdfDosyaAlgila
+  pdfIcerikAlgila
 };

@@ -1,9 +1,8 @@
 {
-  "yuzde": 0,
-  "asama": "hata",
-  "mesaj": "Git yayını başarısız (kod 1)",
-  "bitti": true,
-  "hata": "Git yayını başarısız (kod 1)",
-  "surum": null,
-  "guncelleme": "2026-06-18T09:06:38.474Z"
+  "yuzde": 25,
+  "asama": "git-push",
+  "mesaj": "Git commit + push yapılıyor…",
+  "bitti": false,
+  "hata": null,
+  "guncelleme": "2026-06-18T09:06:31.235Z"
 }

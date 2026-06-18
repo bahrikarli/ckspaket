@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Havuzum — Tarama Dosyaları</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="icon" href="data:,">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #eef3ee;
+      min-height: 100vh;
+      color: #222;
+    }
+    .ust {
+      background: linear-gradient(135deg, #006400, #228B22);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    .ust-sol { display: flex; align-items: center; gap: 14px; }
+    .ust-sol h1 { font-size: 20px; font-weight: 700; }
+    .ust-sol p { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .btn-ghost { background: rgba(255,255,255,0.15); color: #fff; }
+    .btn-ghost:hover { background: rgba(255,255,255,0.25); }
+    .btn-yesil { background: #006400; color: #fff; }
+    .btn-yesil:hover { background: #004d00; }
+    .btn-kirmizi { background: #c62828; color: #fff; }
+    .btn-kirmizi:hover { background: #a02020; }
+    .btn-kucuk { padding: 6px 10px; font-size: 12px; }
+    .govde {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .govde { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #d5e0d8;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .panel-baslik {
+      padding: 14px 16px;
+      background: #f4faf4;
+      border-bottom: 1px solid #d5e0d8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .panel-baslik h2 { font-size: 15px; color: #004d00; }
+    .bilgi-kutu {
+      margin: 16px 20px 0;
+      padding: 12px 14px;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #5d4037;
+    }
+    .bilgi-kutu code {
+      background: #fff;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .arama-satir {
+      padding: 12px 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #eee;
+    }
+    .arama-satir input {
+      flex: 1;
+      min-width: 180px;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .liste-wrap { max-height: calc(100vh - 280px); overflow-y: auto; }
+    .pdf-satir {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .pdf-satir:hover { background: #f8fcf8; }
+    .pdf-satir.secili { background: #e8f5e9; border-left: 4px solid #006400; }
+    .pdf-ad { font-size: 13px; font-weight: 700; color: #1a5928; word-break: break-all; }
+    .pdf-meta { font-size: 11px; color: #666; margin-top: 4px; }
+    .pdf-islem { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .bos-durum {
+      padding: 48px 24px;
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+    }
+    .bos-durum i { font-size: 42px; color: #ccc; display: block; margin-bottom: 12px; }
+    .onizleme-icerik { padding: 0; position: relative; }
+    .onizleme-wrap {
+      position: relative;
+    }
+    .algilama-rozet {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 5;
+      max-width: min(320px, 90%);
+      background: rgba(255, 255, 255, 0.96);
+      border: 2px solid #006400;
+      border-radius: 10px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .algilama-rozet.yukleniyor {
+      border-color: #90a4ae;
+      color: #546e7a;
+    }
+    .algilama-rozet.bos {
+      border-color: #ffe082;
+      background: #fffde7;
+      color: #6d4c41;
+    }
+    .algilama-rozet.tikla {
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .algilama-rozet.tikla:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(0,100,0,0.22);
+    }
+    .algilama-rozet .alg-baslik {
+      font-size: 10px;
+      font-weight: 800;
+      color: #006400;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .algilama-rozet .alg-ad {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a5928;
+      word-break: break-word;
+    }
+    .algilama-rozet .alg-tc {
+      font-size: 12px;
+      color: #444;
+      margin-top: 2px;
+      font-family: Consolas, monospace;
+    }
+    .algilama-rozet .alg-aksiyon {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #006400;
+      font-weight: 700;
+    }
+    .onizleme-baslik {
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #004d00;
+      border-bottom: 1px solid #eee;
+      word-break: break-all;
+    }
+    #onizlemeIframe {
+      width: 100%;
+      height: calc(100vh - 220px);
+      min-height: 420px;
+      border: none;
+      display: block;
+      background: #eceff1;
+    }
+    .onizleme-bos {
+      height: calc(100vh - 220px);
+      min-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #90a4ae;
+      font-size: 14px;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sayac-rozet {
+      background: #006400;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .btn-kapat {
+      background: #fff;
+      color: #c62828;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+    .btn-kapat:hover { background: #ffebee; }
+  </style>
+</head>
+<body>
+
+<div class="ust">
+  <div class="ust-sol">
+    <i class="fas fa-file-pdf" style="font-size:28px;"></i>
+    <div>
+      <h1>PDF Havuzum</h1>
+      <p id="kullaniciEtiket">Ortak havuzdaki kendi taradığınız PDF'ler</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button type="button" class="btn btn-ghost" onclick="listeyiYukle()"><i class="fas fa-sync-alt"></i> Yenile</button>
+    <button type="button" class="btn btn-kapat" onclick="havuzSayfasiKapat()" title="Kapat"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+
+<div class="bilgi-kutu" style="max-width:1400px;margin:16px auto 0;">
+  <i class="fas fa-info-circle"></i>
+  Tarayıcıdan kaydettiğiniz PDF'ler ortak havuza düşer. Dosya adı <b>tarama adınızla</b> başlamalıdır
+  (ör. <code id="ornekAd">kullanici.pdf</code>). Önizlemede <b>TC ve isim algılanırsa</b> sağ üstte görünür; tıklayarak veya
+  <b>Çiftçiye ekle</b> ile manuel olarak aktarabilirsiniz.
+  <span id="havuzYolEtiket" style="display:block;margin-top:6px;font-size:11px;color:#777;"></span>
+</div>
+
+<div class="govde">
+  <div class="panel">
+    <div class="panel-baslik">
+      <h2><i class="fas fa-list"></i> Dosyalarım <span id="dosyaSayac" class="sayac-rozet">0</span></h2>
+    </div>
+    <div class="arama-satir">
+      <input type="text" id="aramaKutu" placeholder="Dosya adında ara…" oninput="filtrele()">
+    </div>
+    <div id="listeAlani" class="liste-wrap">
+      <div class="yukleniyor"><i class="fas fa-spinner fa-spin"></i> Yükleniyor…</div>
+    </div>
+  </div>
+
+  <div class="panel onizleme-icerik">
+    <div class="panel-baslik">
+      <h2><i class="fas fa-eye"></i> Önizleme</h2>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-yesil btn-kucuk" id="ciftciEkleBtn" disabled onclick="ciftciyeEkle()">
+          <i class="fas fa-user-plus"></i> Çiftçiye ekle
+        </button>
+        <button type="button" class="btn btn-yesil btn-kucuk" id="yeniSekmeBtn" disabled onclick="yeniSekmedeAc()">
+          <i class="fas fa-external-link-alt"></i> Yeni sekme
+        </button>
+        <button type="button" class="btn btn-kirmizi btn-kucuk" id="silBtn" disabled onclick="seciliSil()">
+          <i class="fas fa-trash-alt"></i> Sil
+        </button>
+      </div>
+    </div>
+    <div id="onizlemeBaslik" class="onizleme-baslik">Soldan bir PDF seçin</div>
+    <div id="onizlemeAlani">
+      <div class="onizleme-bos"><i class="fas fa-file-pdf" style="font-size:48px;"></i> Önizlemek için listeden dosya seçin</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+const token = localStorage.getItem('token');
+if (!token) { window.location.href = '/'; }
+
+let tumDosyalar = [];
+let seciliDosya = null;
+let algilananKisi = null;
+
+function authHdr() {
+  return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+}
+
+function havuzSayfasiKapat() {
+  arkaModalCarpisiniGoster();
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+  window.location.href = (window.parent && window.parent !== window) ? 'cks.html' : 'anasayfa.html';
+}
+
+function arkaModalCarpisiniGizle() {
+  try {
+    if (window.parent && window.parent !== window) {
+      const btn = window.parent.document.getElementById('cksModalKapatBtn');
+      if (btn) btn.style.display = 'none';
+    }
+  } catch (_) {}
+}
+
+function arkaModalCarpisiniGoster() {
+  try {
+    if (window.parent && window.parent !== window) {
+      const btn = window.parent.document.getElementById('cksModalKapatBtn');
+      if (btn) btn.style.display = '';
+    }
+  } catch (_) {}
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+
+function onizlemeSrc(dosya) {
+  return '/pdf-arsivi/' + encodeURIComponent(dosya) + '#toolbar=1&navpanes=0&scrollbar=1&zoom=page-width';
+}
+
+function algilamaRozetGoster(html, className) {
+  const el = document.getElementById('algilamaRozet');
+  if (!el) return;
+  el.className = 'algilama-rozet ' + (className || '');
+  el.innerHTML = html;
+}
+
+function algilamaRozetTemizle() {
+  algilananKisi = null;
+  algilamaRozetGoster('', 'gizli');
+  const el = document.getElementById('algilamaRozet');
+  if (el) el.style.display = 'none';
+}
+
+async function pdfAlgila(dosya) {
+  algilananKisi = null;
+  const el = document.getElementById('algilamaRozet');
+  if (el) {
+    el.style.display = 'block';
+    algilamaRozetGoster('<div class="alg-baslik">Algılanıyor</div><i class="fas fa-spinner fa-spin"></i> PDF okunuyor (gerekirse OCR)…', 'yukleniyor');
+  }
+  try {
+    const res = await fetch('/api/tarama-havuz-algila/' + encodeURIComponent(dosya), { headers: authHdr() });
+    const data = await res.json();
+    if (!data.success) {
+      algilamaRozetGoster('<div class="alg-baslik">Algılama</div>' + esc(data.message || 'Okunamadı'), 'bos');
+      return;
+    }
+    if (!data.algilandi) {
+      const ocrNot = data.ocrKullanildi ? ' (OCR denendi)' : '';
+      algilamaRozetGoster(
+        '<div class="alg-baslik">Algılama' + ocrNot + '</div>' + esc(data.mesaj || 'TC / isim bulunamadı. Manuel ekleyin.'),
+        'bos'
+      );
+      return;
+    }
+    algilananKisi = {
+      kimlik: data.kimlik || null,
+      adSoyad: data.adSoyad || '',
+      tc: data.tc || '',
+      vergino: data.vergino || '',
+      guven: data.guven
+    };
+    const kimlikMetin = data.tc || data.vergino || '';
+    const kaynakEtiket = data.ocrKullanildi ? 'OCR (1. sayfa)' : (data.kaynak === 'pdf_metin' ? 'PDF metni' : 'Dosya adı');
+    const tikla = data.kimlik
+      ? 'tikla'
+      : (kimlikMetin ? 'tikla' : 'bos');
+    const aksiyon = data.kimlik
+      ? '<div class="alg-aksiyon"><i class="fas fa-hand-pointer"></i> Tıkla — çiftçiye ekle</div>'
+      : (kimlikMetin
+        ? '<div class="alg-aksiyon"><i class="fas fa-hand-pointer"></i> Tıkla — kayıt ara</div>'
+        : '<div class="alg-aksiyon">Kayıt bulunamadı — manuel seçin</div>');
+    algilamaRozetGoster(
+      `<div class="alg-baslik">Algılanan kişi <span style="font-weight:400;opacity:.75;">(${esc(kaynakEtiket)})</span></div>
+       <div class="alg-ad">${esc(data.adSoyad || 'İsim bulunamadı')}</div>
+       ${kimlikMetin ? `<div class="alg-tc">${esc(kimlikMetin)}</div>` : ''}
+       ${aksiyon}`,
+      tikla
+    );
+    const rozet = document.getElementById('algilamaRozet');
+    if (rozet && tikla === 'tikla') {
+      rozet.onclick = () => algilananIleEkle();
+    } else if (rozet) {
+      rozet.onclick = null;
+    }
+  } catch (_) {
+    algilamaRozetGoster('<div class="alg-baslik">Algılama</div>Sunucuya bağlanılamadı', 'bos');
+  }
+}
+
+function satirSec(dosya) {
+  seciliDosya = dosya;
+  document.querySelectorAll('.pdf-satir').forEach(r => {
+    r.classList.toggle('secili', r.dataset.dosya === dosya);
+  });
+  document.getElementById('onizlemeBaslik').textContent = dosya;
+  document.getElementById('onizlemeAlani').innerHTML =
+    `<div class="onizleme-wrap">
+      <div id="algilamaRozet" class="algilama-rozet yukleniyor" style="display:block;">
+        <div class="alg-baslik">Algılanıyor</div><i class="fas fa-spinner fa-spin"></i>
+      </div>
+      <iframe id="onizlemeIframe" src="${onizlemeSrc(dosya)}" title="${esc(dosya)}"></iframe>
+    </div>`;
+  document.getElementById('silBtn').disabled = false;
+  document.getElementById('yeniSekmeBtn').disabled = false;
+  document.getElementById('ciftciEkleBtn').disabled = false;
+  pdfAlgila(dosya);
+}
+
+function tabloCiz(liste) {
+  const alan = document.getElementById('listeAlani');
+  document.getElementById('dosyaSayac').textContent = liste.length;
+  if (!liste.length) {
+    alan.innerHTML = `<div class="bos-durum"><i class="fas fa-folder-open"></i>Havuzda size ait PDF bulunamadı.<br><span style="font-size:12px;margin-top:8px;display:block;">Tarayıcıdan dosya adını kullanıcı adınızla başlayarak kaydedin.</span></div>`;
+    return;
+  }
+  alan.innerHTML = liste.map(d => `
+    <div class="pdf-satir${seciliDosya === d.dosya ? ' secili' : ''}" data-dosya="${esc(d.dosya)}">
+      <div>
+        <div class="pdf-ad">${esc(d.dosya)}</div>
+        <div class="pdf-meta">${esc(d.tarih)} · ${d.boyutKb || 0} KB${d.sayfa ? ' · ' + d.sayfa + ' sayfa' : ''}</div>
+      </div>
+      <div class="pdf-islem">
+        <button type="button" class="btn btn-kirmizi btn-kucuk btn-sil" data-dosya="${esc(d.dosya)}"><i class="fas fa-trash-alt"></i></button>
+      </div>
+    </div>`).join('');
+  alan.querySelectorAll('.pdf-satir').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-sil')) return;
+      satirSec(row.dataset.dosya);
+    });
+  });
+  alan.querySelectorAll('.btn-sil').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tekSil(btn.dataset.dosya);
+    });
+  });
+}
+
+function filtrele() {
+  const q = document.getElementById('aramaKutu').value.trim().toLocaleLowerCase('tr-TR');
+  const f = q ? tumDosyalar.filter(d => d.dosya.toLocaleLowerCase('tr-TR').includes(q)) : tumDosyalar;
+  tabloCiz(f);
+}
+
+async function listeyiYukle() {
+  const alan = document.getElementById('listeAlani');
+  alan.innerHTML = '<div class="yukleniyor"><i class="fas fa-spinner fa-spin"></i> Yükleniyor…</div>';
+  try {
+    const res = await fetch('/api/tarama-havuz-listesi?tum=1', { headers: authHdr() });
+    const data = await res.json();
+    if (!data.success) {
+      tumDosyalar = [];
+      tabloCiz([]);
+      alan.innerHTML = `<div class="bos-durum"><i class="fas fa-exclamation-circle"></i>${esc(data.message || 'Liste alınamadı')}</div>`;
+      if (data.onEkler && data.onEkler.length) {
+        document.getElementById('ornekAd').textContent = data.onEkler[0] + '.pdf';
+      }
+      return;
+    }
+    tumDosyalar = data.dosyalar || [];
+    if (data.havuzYol) {
+      document.getElementById('havuzYolEtiket').textContent = 'Havuz klasörü: ' + data.havuzYol;
+    }
+    if (data.onEkler && data.onEkler.length) {
+      document.getElementById('ornekAd').textContent = data.onEkler[0] + '.pdf';
+    }
+    filtrele();
+    if (seciliDosya && !tumDosyalar.some(d => d.dosya === seciliDosya)) {
+      seciliDosya = null;
+      document.getElementById('onizlemeBaslik').textContent = 'Soldan bir PDF seçin';
+      document.getElementById('onizlemeAlani').innerHTML = '<div class="onizleme-bos"><i class="fas fa-file-pdf" style="font-size:48px;"></i> Önizlemek için listeden dosya seçin</div>';
+      document.getElementById('silBtn').disabled = true;
+      document.getElementById('yeniSekmeBtn').disabled = true;
+      document.getElementById('ciftciEkleBtn').disabled = true;
+    }
+  } catch (e) {
+    alan.innerHTML = `<div class="bos-durum"><i class="fas fa-wifi"></i>Sunucuya bağlanılamadı.</div>`;
+  }
+}
+
+async function tekSil(dosya) {
+  if (!confirm('"' + dosya + '" dosyası kalıcı olarak silinsin mi?')) return;
+  try {
+    const res = await fetch('/api/tarama-havuz-pdf/' + encodeURIComponent(dosya), {
+      method: 'DELETE',
+      headers: authHdr()
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.message || 'Silinemedi.');
+      return;
+    }
+    if (seciliDosya === dosya) seciliDosya = null;
+    await listeyiYukle();
+  } catch (_) {
+    alert('Silme isteği gönderilemedi.');
+  }
+}
+
+function seciliSil() {
+  if (seciliDosya) tekSil(seciliDosya);
+}
+
+function yeniSekmedeAc() {
+  if (seciliDosya) window.open(onizlemeSrc(seciliDosya), '_blank');
+}
+
+let havuzSeciliCiftci = null;
+let havuzCiftciAramaSonuc = [];
+
+async function havuzCiftciAra(q) {
+  const listeEl = document.getElementById('havuzCiftciListe');
+  if (!listeEl) return;
+  if (!q || q.trim().length < 2) {
+    listeEl.innerHTML = '<div class="havuz-ciftci-bos">En az 2 karakter yazın</div>';
+    havuzCiftciAramaSonuc = []; havuzSeciliCiftci = null; return;
+  }
+  listeEl.innerHTML = '<div class="havuz-ciftci-bos"><i class="fas fa-spinner fa-spin"></i> Aranıyor…</div>';
+  try {
+    const res = await fetch('/api/cks-ara?q=' + encodeURIComponent(q.trim()), { headers: authHdr() });
+    const liste = await res.json();
+    havuzCiftciAramaSonuc = Array.isArray(liste) ? liste : [];
+    havuzSeciliCiftci = null;
+    if (!havuzCiftciAramaSonuc.length) { listeEl.innerHTML = '<div class="havuz-ciftci-bos">Sonuç yok</div>'; return; }
+    listeEl.innerHTML = havuzCiftciAramaSonuc.map((c, i) =>
+      `<button type="button" class="havuz-ciftci-satir" data-idx="${i}">
+        <span class="havuz-ciftci-ad">${esc(c['Adı Soyadı'] || '-')}</span>
+        <span class="havuz-ciftci-meta">${esc(c['Tc Kimlik No'] || c.vergino || '')}</span>
+      </button>`).join('');
+    listeEl.querySelectorAll('.havuz-ciftci-satir').forEach(btn => {
+      btn.addEventListener('click', () => {
+        listeEl.querySelectorAll('.havuz-ciftci-satir').forEach(b => b.classList.remove('secili'));
+        btn.classList.add('secili');
+        havuzSeciliCiftci = havuzCiftciAramaSonuc[parseInt(btn.dataset.idx, 10)];
+      });
+    });
+  } catch (_) { listeEl.innerHTML = '<div class="havuz-ciftci-bos">Arama yapılamadı</div>'; }
+}
+
+async function belgenetEkleIsle(kimlikid, yil) {
+  Swal.fire({ title: 'Ekleniyor…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  try {
+    const res = await fetch('/api/belgenet-ekle', {
+      method: 'POST', headers: authHdr(),
+      body: JSON.stringify({ kimlikid, yil, havuzDosya: seciliDosya })
+    });
+    const data = await res.json();
+    if (!data.success) { await Swal.fire('Eklenemedi', data.message || 'Hata', 'error'); return false; }
+    await Swal.fire({ icon: 'success', title: 'Kayıt oluşturuldu', html: `<p style="font-size:13px;">Arşiv: <b>${esc(data.dosyadi)}.pdf</b></p>`, confirmButtonColor: '#006400' });
+    seciliDosya = null; algilananKisi = null; await listeyiYukle();
+    return true;
+  } catch (_) {
+    await Swal.fire('Hata', 'Sunucuya bağlanılamadı', 'error');
+    return false;
+  }
+}
+
+async function algilananIleEkle() {
+  if (!seciliDosya || !algilananKisi) return;
+  const varsayilanYil = localStorage.getItem('aktifCksYili') || String(new Date().getFullYear());
+
+  if (algilananKisi.kimlik) {
+    const onay = await Swal.fire({
+      title: 'Algılanan kişiye ekle',
+      html: `<p style="font-size:14px;"><b>${esc(algilananKisi.adSoyad)}</b><br><span style="font-family:monospace;">${esc(algilananKisi.tc || algilananKisi.vergino || '')}</span></p>
+        <label style="display:block;text-align:left;font-size:12px;font-weight:700;margin-top:10px;">Dönem yılı</label>
+        <input type="number" id="algYil" class="swal2-input" value="${esc(varsayilanYil)}" style="width:100%;margin:0;height:38px;">`,
+      showCancelButton: true,
+      confirmButtonText: 'Çiftçiye Ekle',
+      cancelButtonText: 'Vazgeç',
+      confirmButtonColor: '#006400',
+      preConfirm: () => {
+        const yil = document.getElementById('algYil')?.value;
+        if (!yil || isNaN(parseInt(yil, 10))) { Swal.showValidationMessage('Geçerli yıl girin'); return false; }
+        return parseInt(yil, 10);
+      }
+    });
+    if (!onay.isConfirmed) return;
+    await belgenetEkleIsle(algilananKisi.kimlik, onay.value);
+    return;
+  }
+
+  const arama = algilananKisi.tc || algilananKisi.vergino || algilananKisi.adSoyad || '';
+  await ciftciyeEkle({ onArama: arama });
+}
+
+async function ciftciyeEkle(opts) {
+  if (!seciliDosya) return;
+  const varsayilanYil = localStorage.getItem('aktifCksYili') || String(new Date().getFullYear());
+  const onArama = (opts && opts.onArama) ? String(opts.onArama).trim() : '';
+  havuzSeciliCiftci = null; havuzCiftciAramaSonuc = [];
+  const sonuc = await Swal.fire({
+    title: 'Çiftçiye PDF Ekle',
+    html: `<p style="font-size:13px;text-align:left;margin:0 0 10px;"><b>${esc(seciliDosya)}</b> seçili çiftçiye eklenecek.</p>
+      <label style="display:block;text-align:left;font-size:12px;font-weight:700;">Dönem yılı</label>
+      <input type="number" id="havuzCiftciYil" class="swal2-input" value="${esc(varsayilanYil)}" style="width:100%;margin:0 0 10px;height:38px;">
+      <label style="display:block;text-align:left;font-size:12px;font-weight:700;">Çiftçi ara</label>
+      <input type="text" id="havuzCiftciArama" class="swal2-input" placeholder="Ad, TC veya vergi no…" style="width:100%;margin:0 0 8px;height:38px;">
+      <div id="havuzCiftciListe" class="havuz-ciftci-bos">En az 2 karakter yazın</div>`,
+    width: 520, showCancelButton: true, confirmButtonText: 'Çiftçiye Ekle', cancelButtonText: 'Vazgeç', confirmButtonColor: '#006400',
+    didOpen: () => {
+      if (!document.getElementById('havuzCiftciStil')) {
+        const el = document.createElement('style'); el.id = 'havuzCiftciStil';
+        el.textContent = `#havuzCiftciListe{max-height:220px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;background:#fafafa;text-align:left}
+          .havuz-ciftci-bos{padding:14px;font-size:12px;color:#888;text-align:center}
+          .havuz-ciftci-satir{display:block;width:100%;border:none;border-bottom:1px solid #eee;background:#fff;padding:10px 12px;cursor:pointer;text-align:left}
+          .havuz-ciftci-satir.secili{background:#e8f5e9;border-left:4px solid #006400}
+          .havuz-ciftci-ad{display:block;font-size:13px;font-weight:700;color:#1a5928}
+          .havuz-ciftci-meta{display:block;font-size:11px;color:#666;margin-top:2px}`;
+        document.head.appendChild(el);
+      }
+      let t = null; const inp = document.getElementById('havuzCiftciArama');
+      inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => havuzCiftciAra(inp.value), 350); });
+      if (onArama) { inp.value = onArama; havuzCiftciAra(onArama); }
+      else inp.focus();
+    },
+    preConfirm: () => {
+      const yil = document.getElementById('havuzCiftciYil')?.value;
+      if (!yil || isNaN(parseInt(yil, 10))) { Swal.showValidationMessage('Geçerli yıl girin'); return false; }
+      if (!havuzSeciliCiftci?.kimlik) { Swal.showValidationMessage('Çiftçi seçin'); return false; }
+      return { yil: parseInt(yil, 10), kimlikid: havuzSeciliCiftci.kimlik };
+    }
+  });
+  if (!sonuc.isConfirmed || !sonuc.value) return;
+  await belgenetEkleIsle(sonuc.value.kimlikid, sonuc.value.yil);
+}
+
+fetch('/api/me', { headers: authHdr() })
+  .then(r => r.json())
+  .then(d => {
+    if (d && d.success && d.user) {
+      const ad = [d.user.ad, d.user.soyad].filter(Boolean).join(' ') || d.user.kullaniciadi || 'Personel';
+      document.getElementById('kullaniciEtiket').textContent = ad + ' — ortak havuzdaki PDF\'leriniz';
+      const taramaAd = (d.user.taramaOnEk || '').trim() || d.user.kullaniciadi || 'kullanici';
+      document.getElementById('ornekAd').textContent = taramaAd + '.pdf';
+    }
+  })
+  .catch(() => {});
+
+listeyiYukle();
+arkaModalCarpisiniGizle();
+window.addEventListener('pagehide', arkaModalCarpisiniGoster);
+</script>
+</body>
+</html>

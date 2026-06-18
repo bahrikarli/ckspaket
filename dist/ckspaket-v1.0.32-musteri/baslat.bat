@@ -31,19 +31,9 @@ for /f "usebackq eol=# tokens=1,* delims==" %%a in (".env") do (
 netstat -ano 2>nul | findstr ":%PORT%" | findstr "LISTENING" >nul
 if errorlevel 1 (
   if not exist "logs" mkdir logs
-  echo Sunucu baslatiliyor, lutfen bekleyin ^(en fazla 60 sn^)...
   wscript //Nologo "%~dp0sunucu-baslat.vbs"
   call "%~dp0sunucu-bekle.bat" %PORT% 60
-  if errorlevel 1 (
-    echo.
-    echo UYARI: Sunucu hazir yaniti alinamadi. logs\server.log dosyasina bakin.
-    echo Elle denemek icin: node server.js
-    echo.
-  ) else (
-    echo Sunucu hazir.
-  )
 ) else (
-  echo Port %PORT% zaten acik, sunucu calisiyor.
   call "%~dp0sunucu-bekle.bat" %PORT% 5
 )
 

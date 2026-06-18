@@ -42,10 +42,10 @@ if "%OK%"=="0" (
   echo Hicbiri baglanmadi.
   echo.
   echo Kontrol:
-  echo  1. SSMS - sa sifresi .env ile ayni mi? ^(189189^)
-  echo  2. sa hesabi Enabled mi?
-  echo  3. TCP/IP - IP4 127.0.0.1 Enabled Yes, port 1433
-  echo  4. SQL Server servisi calisiyor mu?
+  echo  1) SSMS - sa sifresi .env ile ayni mi? ^(189189^)
+  echo  2) sa hesabi Enabled mi?
+  echo  3) TCP/IP - IP4 127.0.0.1 Enabled Yes, port 1433
+  echo  4) SQL Server servisi calisiyor mu?
 )
 
 echo.

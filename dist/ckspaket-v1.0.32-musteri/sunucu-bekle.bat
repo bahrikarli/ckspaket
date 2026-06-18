@@ -6,9 +6,8 @@ if "%PORT%"=="" set "PORT=3030"
 set "MAX=%~2"
 if "%MAX%"=="" set "MAX=60"
 
-echo   Port %PORT% kontrol ediliyor...
 powershell -NoProfile -Command ^
   "$port='%PORT%'; $max=[int]'%MAX%'; $url='http://127.0.0.1:'+$port+'/api/health';" ^
-  "for($i=0; $i -lt $max; $i++) { Write-Host ('  Deneme ' + ($i+1) + '/' + $max + '...'); try { $r=Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2; if($r.StatusCode -eq 200){ exit 0 } } catch {}; Start-Sleep -Seconds 2 };" ^
+  "for($i=0; $i -lt $max; $i++) { try { $r=Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2; if($r.StatusCode -eq 200){ exit 0 } } catch {}; Start-Sleep -Seconds 2 };" ^
   "exit 1"
 exit /b %ERRORLEVEL%

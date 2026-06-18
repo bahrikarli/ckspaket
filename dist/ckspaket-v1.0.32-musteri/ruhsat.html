@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biçerdöver Ruhsat İşlemleri</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f7f6; padding: 20px; }
+    .header { background: #006400; color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    
+    .grid-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .box h3 { color: #006400; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 16px; }
+    
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-weight: bold; color: #333; margin-bottom: 4px; font-size: 12px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; font-family: inherit; text-transform: uppercase; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #006400; outline: none; }
+    
+    .btn-container { grid-column: span 3; display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+    .btn { padding: 12px 25px; border: none; border-radius: 5px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.3s; }
+    .btn-save { background: #28a745; } .btn-save:hover { background: #218838; }
+    .btn-list { background: #17a2b8; } .btn-list:hover { background: #117a8b; }
+
+    /* Liste Tablosu Stilleri */
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #f0fff0; color: #006400; }
+    .btn-print-small { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-weight: bold; }
+    .btn-print-small:hover { background: #0056b3; }
+
+    /* Yeni Yazdır Butonları */
+    .btn-print-on { background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; margin-right: 5px; transition: 0.2s;}
+    .btn-print-on:hover { background: #0056b3; }
+    
+    .btn-print-arka { background: #e67e22; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; transition: 0.2s;}
+    .btn-print-arka:hover { background: #d35400; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2><i class="fas fa-tractor"></i> İş Makinesi (Biçerdöver) Tescil Belgesi</h2>
+    <p id="ruhsat-kurum-baslik" style="margin-top:8px;font-size:14px;opacity:0.95;">…</p>
+  </div>
+
+  <div class="grid-container">
+    
+    <div class="box">
+      <h3><i class="fas fa-file-signature"></i> 1. Tescil Bilgileri</h3>
+      <div class="form-group"><label>Tescil Sıra No</label><input type="text" id="tescilSiraNo" placeholder="Örn: 2024/006"></div>
+      <div class="form-group"><label>Belge Seri No</label><input type="text" id="belgeSeriNo" placeholder="Örn: B 293520"></div>
+      <div class="form-group"><label>Tescil Tarihi</label><input type="date" id="tescilTarihi"></div>
+      <div class="form-group"><label>Tescil Plaka No</label><input type="text" id="tescilPlakaNo" placeholder="Örn: 42.25.24.006"></div>
+    </div>
+
+    <div class="box">
+      <h3><i class="fas fa-cogs"></i> 2. Makine Özellikleri</h3>
+      <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;"><label>Aracın Cinsi</label><input type="text" id="aracinCinsi" value="BİÇERDÖVER"></div>
+          <div class="form-group" style="flex:1;"><label>Yakıt Cinsi</label><input type="text" id="yakitCinsi" value="MOTORİN"></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;"><label>Markası</label><input type="text" id="markasi" placeholder="NEWHOLLAND"></div>
+          <div class="form-group" style="flex:1;"><label>Tipi</label><input type="text" id="tipi" placeholder="TC 5070"></div>
+      </div>
+      <div class="form-group"><label>Şasi No</label><input type="text" id="sasiNo"></div>
+      <div class="form-group"><label>Motor No</label><input type="text" id="motorNo"></div>
+      <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;"><label>Motor Gücü</label><input type="text" id="motorGucu"></div>
+          <div class="form-group" style="flex:1;"><label>Model Yılı</label><input type="text" id="modelYili" placeholder="2013"></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;"><label>Yürüyüş Takımı</label><input type="text" id="yuruyusTakimi" value="LASTİK"></div>
+          <div class="form-group" style="flex:1;"><label>Y.Tk. Özellikleri</label><input type="text" id="yuruyusOzel"></div>
+      </div>
+      <div class="form-group"><label>Diğer Özellikleri</label><input type="text" id="digerOzellikleri"></div>
+    </div>
+
+    <div class="box">
+      <h3><i class="fas fa-user-tie"></i> 3. İş Makinesi Sahibi</h3>
+      <div class="form-group"><label>Adı ve Soyadı / Unvan</label><input type="text" id="sahipAdSoyad" placeholder="Örn: MESUT ZEYBEK"></div>
+      <div class="form-group"><label>T.C. Kimlik / Vergi No</label><input type="text" id="sahipTc" maxlength="11"></div>
+      <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;"><label>Ana Adı</label><input type="text" id="sahipAnaAdi"></div>
+          <div class="form-group" style="flex:1;"><label>Baba Adı</label><input type="text" id="sahipBabaAdi"></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+          <div class="form-group" style="flex:1;"><label>Doğum Yeri</label><input type="text" id="sahipDogumYeri" placeholder="SARAYÖNÜ"></div>
+          <div class="form-group" style="flex:1;"><label>Doğum Tarihi</label><input type="text" id="sahipDogumTarihi" placeholder="Örn: 1973"></div>
+      </div>
+      <div class="form-group"><label>Adres</label><textarea id="sahipAdres" rows="3" placeholder="SARAÇ MAH... SARAYÖNÜ / KONYA"></textarea></div>
+    </div>
+
+    <div class="btn-container">
+        <button class="btn btn-save" onclick="ruhsatKaydet()"><i class="fas fa-save"></i> YENİ KAYIT EKLE</button>
+        <button class="btn btn-list" onclick="kayitliRuhsatlariAc()"><i class="fas fa-list"></i> KAYITLI RUHSATLARI AÇ VE YAZDIR</button>
+    </div>
+
+  </div>
+
+  <div id="listeModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:20px; border-radius:8px; width:90%; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 5px 25px rgba(0,0,0,0.5);">
+        
+        <button onclick="document.getElementById('listeModal').style.display='none'" style="position:absolute; top:10px; right:15px; font-size:25px; border:none; background:none; cursor:pointer; color:#dc3545;">&times;</button>
+        
+        <h3 style="color:#006400; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:15px;"><i class="fas fa-archive"></i> Veritabanındaki Ruhsatlar</h3>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Sıra No</th>
+                    <th>Plaka</th>
+                    <th>Ruhsat Sahibi</th>
+                    <th>Marka / Tip</th>
+                    <th style="text-align:center; width: 120px;">İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="ruhsatTabloGövdesi">
+                </tbody>
+        </table>
+    </div>
+  </div>
+
+  <script>
+    let tumRuhsatlar = [];
+    const RUHSAT_IMZA_VARSAYILAN = {
+        genelSekreter: 'BAHRİ KARLI',
+        yonKurBaskani: 'ENGİN ÇELİK'
+    };
+    window.ruhsatImzaAyarlari = { ...RUHSAT_IMZA_VARSAYILAN };
+    window.ruhsatKurumBilgi = { kurum_adi: '', ilce_adi: '', il_adi: '' };
+
+    function ruhsatTokenAl() {
+      try {
+        return localStorage.getItem('token') || (window.parent !== window && window.parent.localStorage.getItem('token'));
+      } catch (_) {
+        return localStorage.getItem('token');
+      }
+    }
+
+    async function ruhsatKurumBaslikYukle() {
+      const el = document.getElementById('ruhsat-kurum-baslik');
+      if (!el) return;
+      try {
+        const res = await fetch('/api/kurum-genel', { cache: 'no-store' });
+        const d = await res.json();
+        if (d && d.success !== false) {
+          window.ruhsatKurumBilgi = {
+            kurum_adi: String(d.kurum_adi || '').trim(),
+            ilce_adi: String(d.ilce_adi || '').trim(),
+            il_adi: String(d.il_adi || '').trim()
+          };
+          const parcalar = [d.kurum_adi, d.ilce_adi && d.il_adi ? `${d.ilce_adi} / ${d.il_adi}` : (d.ilce_adi || d.il_adi)].filter(Boolean);
+          if (parcalar.length) el.textContent = parcalar.join(' — ');
+        }
+      } catch (_) {}
+    }
+
+    async function ruhsatImzaAyarlariniYukle() {
+        try {
+            const token = ruhsatTokenAl();
+            const res = await fetch('/api/kurum-ayarlari', {
+                headers: token ? { Authorization: 'Bearer ' + token } : {}
+            });
+            const sonuc = await res.json();
+            const t = sonuc.teknik || sonuc.data?.teknik || {};
+            const d = sonuc.data || {};
+            if (d.kurum_adi) {
+              window.ruhsatKurumBilgi.kurum_adi = String(d.kurum_adi).trim();
+              const el = document.getElementById('ruhsat-kurum-baslik');
+              if (el && d.kurum_adi) {
+                const ilce = d.ilce_adi || window.ruhsatKurumBilgi.ilce_adi;
+                const il = d.il_adi || window.ruhsatKurumBilgi.il_adi;
+                const yer = ilce && il ? `${ilce} / ${il}` : (ilce || il || '');
+                el.textContent = yer ? `${d.kurum_adi} — ${yer}` : d.kurum_adi;
+              }
+            }
+            window.ruhsatImzaAyarlari = {
+                genelSekreter: (t.ruhsatGenelSekreter || RUHSAT_IMZA_VARSAYILAN.genelSekreter).trim(),
+                yonKurBaskani: (t.ruhsatYonKurBaskani || RUHSAT_IMZA_VARSAYILAN.yonKurBaskani).trim()
+            };
+        } catch (_) {
+            window.ruhsatImzaAyarlari = { ...RUHSAT_IMZA_VARSAYILAN };
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!ruhsatTokenAl()) {
+        try { (window.top !== window.self ? window.top : window).location.href = '/'; } catch (_) { location.href = '/'; }
+        return;
+      }
+      ruhsatKurumBaslikYukle();
+      ruhsatImzaAyarlariniYukle();
+    });
+
+    // 1. FORMDAN YENİ KAYIT EKLEME FONKSİYONU
+    async function ruhsatKaydet() {
+        const ruhsatVerisi = {
+            tescilSiraNo: document.getElementById('tescilSiraNo').value.trim(),
+            belgeSeriNo: document.getElementById('belgeSeriNo').value.trim(),
+            tescilTarihi: document.getElementById('tescilTarihi').value,
+            tescilPlakaNo: document.getElementById('tescilPlakaNo').value.trim(),
+            aracinCinsi: document.getElementById('aracinCinsi').value.trim(),
+            yakitCinsi: document.getElementById('yakitCinsi').value.trim(),
+            markasi: document.getElementById('markasi').value.trim(),
+            tipi: document.getElementById('tipi').value.trim(),
+            sasiNo: document.getElementById('sasiNo').value.trim(),
+            motorNo: document.getElementById('motorNo').value.trim(),
+            motorGucu: document.getElementById('motorGucu').value.trim(),
+            modelYili: document.getElementById('modelYili').value.trim(),
+            yuruyusTakimi: document.getElementById('yuruyusTakimi').value.trim(),
+            yuruyusOzel: document.getElementById('yuruyusOzel').value.trim(),
+            digerOzellikleri: document.getElementById('digerOzellikleri').value.trim(),
+            sahipAdSoyad: document.getElementById('sahipAdSoyad').value.trim(),
+            sahipTc: document.getElementById('sahipTc').value.trim(),
+            sahipAnaAdi: document.getElementById('sahipAnaAdi').value.trim(),
+            sahipBabaAdi: document.getElementById('sahipBabaAdi').value.trim(),
+            sahipDogumYeri: document.getElementById('sahipDogumYeri').value.trim(),
+            sahipDogumTarihi: document.getElementById('sahipDogumTarihi').value.trim(),
+            sahipAdres: document.getElementById('sahipAdres').value.trim()
+        };
+
+        if(!ruhsatVerisi.sahipAdSoyad || !ruhsatVerisi.sasiNo) return alert("Lütfen en azından 'Sahip Adı' ve 'Şasi No' giriniz!");
+
+        try {
+            const token = ruhsatTokenAl(); 
+            const response = await fetch('/api/ruhsat-kaydet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(ruhsatVerisi)
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert("Ruhsat başarıyla kaydedildi!");
+                // Kayıt sonrası formu temizleyebiliriz
+                document.querySelectorAll('input:not([id="aracinCinsi"]):not([id="yakitCinsi"]):not([id="yuruyusTakimi"]), textarea').forEach(el => el.value = '');
+            } else {
+                alert("Hata: " + data.message);
+            }
+        } catch (err) {
+            alert("Sunucuya bağlanılamadı.");
+        }
+    }
+
+    // 2. KAYITLI RUHSATLARI ÇEKME VE MODALI AÇMA
+    async function kayitliRuhsatlariAc() {
+        try {
+            const token = ruhsatTokenAl(); 
+            const response = await fetch('/api/ruhsat-liste', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                tumRuhsatlar = data.veriler;
+                const tbody = document.getElementById('ruhsatTabloGövdesi');
+                tbody.innerHTML = '';
+
+// ... (kayitliRuhsatlariAc fonksiyonu içi)
+                if(tumRuhsatlar.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Henüz kayıtlı ruhsat bulunmuyor.</td></tr>';
+                } else {
+                    tumRuhsatlar.forEach((r, index) => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${r.tescil_sira_no || '-'}</td>
+                                <td><strong>${r.tescil_plaka_no || '-'}</strong></td>
+                                <td>${r.sahip_ad_soyad || '-'}</td>
+                                <td>${r.markasi || ''} ${r.tipi || ''}</td>
+                                <td style="text-align:center; white-space:nowrap;">
+                                    <button class="btn-print-on" onclick="matbuYazdir(${index}, 'on')"><i class="fas fa-print"></i> ÖNÜ YAZDIR</button>
+                                    <button class="btn-print-arka" onclick="matbuYazdir(${index}, 'arka')"><i class="fas fa-print"></i> ARKAYI YAZDIR</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+// ...
+                
+                document.getElementById('listeModal').style.display = 'flex';
+            } else {
+                alert("Veriler çekilemedi: " + data.message);
+            }
+        } catch (err) {
+            alert("Sunucu bağlantı hatası!");
+        }
+    }
+
+    // 3. SEÇİLEN RUHSATI NOKTA ATIŞI YAZDIRMA (KALİBRASYONLU)
+    // 3. SEÇİLEN RUHSATI NOKTA ATIŞI YAZDIRMA (BELGE SERİ NO GİZLENDİ)
+    // 3. SEÇİLEN RUHSATI NOKTA ATIŞI YAZDIRMA (ÖN / ARKA SEÇENEKLİ)
+    function matbuYazdir(index, taraf) {
+        ruhsatImzaAyarlariniYukle().then(() => matbuYazdirDevam(index, taraf));
+    }
+
+    function matbuYazdirDevam(index, taraf) {
+        const r = tumRuhsatlar[index];
+        
+        // Tarih Formatları
+        let formatliTarih = "";
+        if (r.tescil_tarihi) {
+            const dt = new Date(r.tescil_tarihi);
+            formatliTarih = `${String(dt.getDate()).padStart(2,'0')}.${String(dt.getMonth()+1).padStart(2,'0')}.${dt.getFullYear()}`;
+        }
+        const bugun = new Date();
+        const aktifTarih = `${String(bugun.getDate()).padStart(2,'0')}.${String(bugun.getMonth()+1).padStart(2,'0')}.${bugun.getFullYear()}`;
+
+        const printWindow = window.open('', '_blank', 'width=900,height=800');
+        
+        const testModu = false; 
+        const borderAyar = testModu ? "border: 1px dashed red; background: rgba(255,255,0,0.3);" : "";
+
+        // HANGİ TARAFA TIKLANDIYSA ONA GÖRE İÇERİK OLUŞTURUYORUZ
+        let yazdirilacakSayfa = "";
+
+        const imza = window.ruhsatImzaAyarlari || RUHSAT_IMZA_VARSAYILAN;
+
+        if (taraf === 'on') {
+            yazdirilacakSayfa = `
+            <div class="page">
+                <div class="alan" style="top: 12.0cm; left: 0.5cm; width: 4.5cm; text-align: center; line-height: 1.4;">
+                    ${aktifTarih}<br>${imza.genelSekreter}<br>GENEL SEKRETER
+                </div>
+                <div class="alan" style="top: 12.0cm; left: 5.5cm; width: 4.5cm; text-align: center; line-height: 1.4;">
+                    ${aktifTarih}<br>${imza.yonKurBaskani}<br>YÖN.KUR.BŞK.
+                </div>
+                <div class="alan" style="top: 2.8cm; left: 11.5cm;">${r.tescil_sira_no || ''}</div>
+                <div class="alan" style="top: 3.8cm; left: 11.5cm;">${formatliTarih}</div>
+                <div class="alan" style="top: 3.6cm; left: 16.5cm;">${r.tescil_plaka_no || ''}</div>
+                <div class="alan" style="top: 4.8cm; left: 14.0cm;">${r.aracin_cinsi || ''}</div>
+                <div class="alan" style="top: 5.8cm; left: 12.0cm;">${r.markasi || ''}</div>
+                <div class="alan" style="top: 5.8cm; left: 16.5cm;">${r.tipi || ''}</div>
+                <div class="alan" style="top: 6.8cm; left: 14.0cm;">${r.sasi_no || ''}</div>
+                <div class="alan" style="top: 7.8cm; left: 14.0cm;">${r.motor_no || ''}</div>
+                <div class="alan" style="top: 8.9cm; left: 12.0cm;">${r.motor_gucu || ''}</div>
+                <div class="alan" style="top: 8.9cm; left: 16.5cm;">${r.model_yili || ''}</div>
+                <div class="alan" style="top: 10.0cm; left: 12.0cm;">${r.yuruyus_takimi || ''}</div>
+                <div class="alan" style="top: 10.0cm; left: 16.5cm;">${r.yuruyus_tk_ozellikleri || ''}</div>
+                <div class="alan" style="top: 11.0cm; left: 14.0cm;">${r.yakit_cinsi || ''}</div>
+                <div class="alan" style="top: 12.0cm; left: 11.5cm; width: 8.5cm; white-space: normal; word-wrap: break-word;">${r.diger_ozellikleri || ''}</div>
+            </div>`;
+        } 
+        else if (taraf === 'arka') {
+            yazdirilacakSayfa = `
+            <div class="page">
+                <div class="alan" style="top: 3.5cm; left: 2.5cm; font-size: 10pt; font-weight: normal; line-height: 1.4;">2918 Sayılı Karayolları Kanununun<br>22. Maddesi Gereği 3.05 m Genişliği<br>Geçmemek Kaydıyla Gün<br>Doğumundan Gün Batımına Kadar<br>Trafiğe Çıkabilir.</div>
+                <div class="alan" style="top: 4.8cm; left: 11.5cm;">Adı ve Soyadı</div>
+                <div class="alan" style="top: 4.8cm; left: 15.0cm;">${r.sahip_ad_soyad || ''}</div>
+                <div class="alan" style="top: 5.7cm; left: 11.5cm;">T.C.Kimlik No</div>
+                <div class="alan" style="top: 5.7cm; left: 15.0cm;">${r.sahip_tc || ''}</div>
+                <div class="alan" style="top: 6.6cm; left: 11.5cm;">Ana adı</div>
+                <div class="alan" style="top: 6.6cm; left: 15.0cm;">${r.sahip_ana_adi || ''}</div>
+                <div class="alan" style="top: 7.5cm; left: 11.5cm;">Baba Adı</div>
+                <div class="alan" style="top: 7.5cm; left: 15.0cm;">${r.sahip_baba_adi || ''}</div>
+                <div class="alan" style="top: 8.4cm; left: 11.5cm;">Doğum Yeri</div>
+                <div class="alan" style="top: 8.4cm; left: 15.0cm;">${r.sahip_dogum_yeri || ''}</div>
+                <div class="alan" style="top: 9.3cm; left: 11.5cm;">Doğum Tarihi</div>
+                <div class="alan" style="top: 9.3cm; left: 15.0cm;">${r.sahip_dogum_tarihi || ''}</div>
+                <div class="alan" style="top: 10.2cm; left: 11.5cm;">Adres</div>
+                <div class="alan-adres" style="top: 10.2cm; left: 15.0cm;">${r.sahip_adres || ''}</div>
+            </div>`;
+        }
+
+        printWindow.document.write(`
+        <html>
+        <head>
+            <title>Ruhsat ${taraf === 'on' ? 'ÖN' : 'ARKA'} - ${r.tescil_plaka_no || 'Plakasiz'}</title>
+            <style>
+                @page { size: A4 portrait; margin: 0mm !important; padding: 0mm !important; }
+                html, body { margin: 0mm !important; padding: 0mm !important; width: 210mm; height: 297mm; font-family: Arial, sans-serif; font-size: 11pt; font-weight: bold; color: black; }
+                .page { width: 21cm; height: 29.7cm; position: relative; overflow: hidden; margin: 0 !important; padding: 0 !important; }
+                .alan { position: absolute; ${borderAyar} white-space: nowrap; margin: 0; padding: 0; line-height: 1; }
+                .alan-adres { position: absolute; ${borderAyar} width: 5.5cm; line-height: 1.3; margin: 0; padding: 0; white-space: normal; word-wrap: break-word; }
+            </style>
+        </head>
+        <body>
+            ${yazdirilacakSayfa}
+        </body>
+        </html>
+        `);
+        
+        printWindow.document.close();
+        printWindow.focus();
+        
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+    }
+  </script>
+</body>
+</html>

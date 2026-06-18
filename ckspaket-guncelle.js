@@ -40,7 +40,7 @@ const KOPYALA = [
 
 const KORU = new Set([
   'anasayfa.html', 'index.html', 'arsiv.html', 'ruhsat.html', 'tarim-rehber.html', 'package.json', 'OKU-BENI.md', '.env', '.env.example',
-  'dashboard.html', 'personel-pdf-havuz.html', 'paket-admin.js',
+  'dashboard.html', 'personel-pdf-havuz.html', 'paket-admin.js', 'personel-admin.js',
   'ckspaket-ayar.bat', 'ckspaket-baslat.bat', 'ckspaket-guncelle.bat', 'ckspaket-guncelle.js',
   'sistem-ayar.js', 'config.js',
   'kurum-sunucu.js', 'kurum-ayar.js', 'kurum-baslik.js', 'kurum-ayar-client.js',
